@@ -10,7 +10,7 @@ void comm::Decoder::feed(uint8_t * pData, csize_t size) {
     }
 }
 
-void comm::Decoder::subscribe(std::shared_ptr<comm::DecodingObserver>& pObserver) {
+void comm::Decoder::subscribe(const std::shared_ptr<comm::DecodingObserver>& pObserver) {
     if (nullptr != pObserver) {
         mObservers.push_back(pObserver);
     }

@@ -41,7 +41,7 @@ enum DECODING_STATES {
 
 class DecodingObserver {
 public:
-    virtual int getId() = 0;
+    virtual ~DecodingObserver() {}
     virtual void onComplete(const std::shared_ptr<uint8_t>& pData, csize_t size) = 0;
 };
 
@@ -58,7 +58,7 @@ public:
 
     void feed(uint8_t * pData, int size);
 
-    void subscribe(std::shared_ptr<DecodingObserver>& pObserver);
+    void subscribe(const std::shared_ptr<DecodingObserver>& pObserver);
     // void unsubscribe();
 
 private:
