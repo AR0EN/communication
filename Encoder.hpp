@@ -7,12 +7,30 @@
 #include <memory>
 #include <vector>
 
+#include "common.hpp"
+
 namespace comm {
 
-constexpr uint8_t SF = 0xF0;
-constexpr uint8_t EF = 0x0F;
+inline bool encode(uint8_t * pData, csize_t size, uint8_t *& pEncodedData, csize_t& encodedSize) {
+    if ((nullptr != pData) && ValidatePayloadSize(size)) {
+        encodedSize = sizeof(SF) + sizeof(csize_t) + size + sizeof(EF);
+        pEncodedData = new uint8_t[encodedSize];
 
-constexpr int32_t MAX_PAYLOAD_SIZE = 1024;
+        int index = 0;
+        pEncodedData[index++] = SF;
+        memcpy(pEncodedData + index, &size, sizeof(size));
+        index += sizeof(encodedSize);
+
+        memcpy(pEncodedData + index, pData, size);
+        index += size;
+
+        pEncodedData[index] = EF;
+
+        return true;
+    }
+
+    return false;
+}
 
 enum DECODING_STATES {
     E_SF,
@@ -24,7 +42,7 @@ enum DECODING_STATES {
 class DecodingObserver {
 public:
     virtual int getId() = 0;
-    virtual void onComplete(const std::shared_ptr<uint8_t>& pData, int size) = 0;
+    virtual void onComplete(const std::shared_ptr<uint8_t>& pData, csize_t size) = 0;
 };
 
 class Decoder {
@@ -41,10 +59,7 @@ public:
     void feed(uint8_t * pData, int size);
 
     void subscribe(std::shared_ptr<DecodingObserver>& pObserver);
-
-    static bool validatePayloadSize(int32_t payloadSize) {
-        return (0 < payloadSize) && (MAX_PAYLOAD_SIZE >= payloadSize);
-    }
+    // void unsubscribe();
 
 private:
     inline void proceed(uint8_t b) {
@@ -63,12 +78,12 @@ private:
         {
             static int size_byte_pos = 0;
 
-            mPayloadSize |= ((int32_t)b & 0x000000FF) << size_byte_pos++;
+            mPayloadSize |= ((csize_t)b & 0x000000FF) << size_byte_pos++;
 
             if (sizeof(mPayloadSize) <= (uint16_t)size_byte_pos) {
                 size_byte_pos = 0;
 
-                if (validatePayloadSize(mPayloadSize)) {
+                if (ValidatePayloadSize(mPayloadSize)) {
                     pPayload = new uint8_t[mPayloadSize];
                     mState = E_PAYLOAD;
                 } else {
@@ -117,7 +132,7 @@ private:
     }
 
     DECODING_STATES mState;
-    int32_t mPayloadSize;
+    csize_t mPayloadSize;
     uint8_t * pPayload;
 
     std::vector<std::shared_ptr<DecodingObserver>> mObservers;
