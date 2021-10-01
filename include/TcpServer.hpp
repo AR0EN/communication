@@ -1,22 +1,21 @@
 #ifndef _TCP_SERVER_HPP_
 #define _TCP_SERVER_HPP_
 
-#include <stdio.h>
-#include <stdint.h>
-#include <unistd.h>
-#include <arpa/inet.h>
-#include <sys/socket.h>
-#include <sys/time.h>
+#include "common.hpp"
+#include "Encoder.hpp"
+#include "Message.hpp"
 
 #include <atomic>
 #include <memory>
 #include <thread>
 #include <vector>
 
-#include "common.hpp"
-#include "Encoder.hpp"
-#include "Message.hpp"
-#include "Observer.hpp"
+#include <stdio.h>
+#include <stdint.h>
+#include <unistd.h>
+#include <arpa/inet.h>
+#include <sys/socket.h>
+#include <sys/time.h>
 
 namespace comm {
 
@@ -102,10 +101,10 @@ public:
         printf("TcpServer has been finalized!\n");
     }
 
-    csize_t send(std::shared_ptr<Message> pMessage);
+    csize_t send(std::shared_ptr<IMessage> pMessage);
 
     bool start();
-    bool subscribe(const std::shared_ptr<NetObserver>& pObserver);
+    bool subscribe(const std::shared_ptr<IObserver>& pObserver);
     // void unsubscribe() = 0;
 
     // DecodingObserver implementation
@@ -113,7 +112,7 @@ public:
         if (pData) {
             uint8_t * tmp = pData.get();
 
-            std::shared_ptr<NetMessage> pMessage(new NetMessage());
+            std::shared_ptr<Message> pMessage(new Message());
             pMessage->deserialize(tmp, size);
 
             notify(pMessage);
@@ -121,7 +120,7 @@ public:
     }
 
 private:
-    void notify (const std::shared_ptr<NetMessage>& pMessage) {
+    void notify (const std::shared_ptr<Message>& pMessage) {
         for (auto pObserver : mObservers) {
             pObserver->onRecv(pMessage);
         }
@@ -137,7 +136,7 @@ private:
     uint8_t mRxBuffer[MAX_PAYLOAD_SIZE << 1];
 
     std::shared_ptr<Decoder> pDecoder;
-    std::vector<std::shared_ptr<NetObserver>> mObservers;
+    std::vector<std::shared_ptr<IObserver>> mObservers;
 
     std::unique_ptr<std::thread> pThread;
     std::atomic<bool> mExitFlag;

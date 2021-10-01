@@ -11,7 +11,7 @@
 #include "UdpPeer.hpp"
 
 comm::csize_t comm::UdpPeer::send(
-    const char * ipAddress, uint16_t port, std::shared_ptr<comm::Message> pMessage) {
+    const char * ipAddress, uint16_t port, std::shared_ptr<comm::IMessage> pMessage) {
 
     int errorCode = -1;
 
@@ -71,7 +71,7 @@ comm::csize_t comm::UdpPeer::send(
     return ret;
 }
 
-bool comm::UdpPeer::subscribe(const std::shared_ptr<NetObserver>& pObserver) {
+bool comm::UdpPeer::subscribe(const std::shared_ptr<IObserver>& pObserver) {
     if (nullptr == pObserver) {
         return false;
     } else {

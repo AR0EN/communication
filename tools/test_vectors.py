@@ -8,29 +8,25 @@ VAL_MAX = 255
 DU_LEN_MAX = 10
 NUM_OF_VECTORS = 10
 
+VECTOR_HEADER = 'test_vectors.hpp'
+VECTOR_SRC = 'test_vectors.cpp'
+
 vectors = []
 
 for i in range(NUM_OF_VECTORS):
     v = []
-    # v.append(SF)
-    data_len = random.randint(1, DU_LEN_MAX)
-    # v.append(data_len & 0xFF)
-    # v.append((data_len >> 8) & 0xFF)
-    # v.append((data_len >> 16) & 0xFF)
-    # v.append((data_len >> 24) & 0xFF)
 
-    du = random.randint(VAL_MIN, VAL_MAX, size=data_len)
+    du = random.randint(VAL_MIN, VAL_MAX, size=random.randint(1, DU_LEN_MAX))
     v += du.tolist()
 
-    # v.append(EF)
     vectors.append(v)
 
-with open('test_vectors.cpp', 'w') as fw:
-    fw.write('#include <stdint.h>\n\n')
+with open(VECTOR_SRC, 'w') as fw:
+    fw.write('#include "{}"\n\n'.format(VECTOR_HEADER))
     fw.write('#include <vector>\n\n')
+    fw.write('#include <stdint.h>\n\n')
 
     vectors_txt = 'std::vector<uint8_t *> vectors = {'
-    vectors_identifiers_txt = 'std::vector<uint16_t> vectors_identifiers = {'
     vectors_sizes_txt = 'std::vector<int> vectors_sizes = {'
 
     for i, v in enumerate(vectors):
@@ -43,27 +39,22 @@ with open('test_vectors.cpp', 'w') as fw:
         fw.write(' \\\n};\n\n')
 
         vectors_txt += 'v' + str(i) + ' ,'
-        vectors_identifiers_txt += str(i) + ','
         vectors_sizes_txt += str(len(v)) + ' ,'
 
     vectors_txt = vectors_txt.strip(',') + '};\n'
     fw.write(vectors_txt)
 
-    vectors_identifiers_txt = vectors_identifiers_txt.strip(',') + '};\n'
-    fw.write(vectors_identifiers_txt)
-
     vectors_sizes_txt = vectors_sizes_txt.strip(',') + '};\n'
     fw.write(vectors_sizes_txt)
 
-with open('test_vectors.hpp', 'w') as fw:
+with open(VECTOR_HEADER, 'w') as fw:
     fw.write('#ifndef _TEST_VECTORS_HPP_\n')
     fw.write('#define _TEST_VECTORS_HPP_\n\n')
 
-    fw.write('#include <stdint.h>\n\n')
     fw.write('#include <vector>\n\n')
+    fw.write('#include <stdint.h>\n\n')
 
     fw.write('extern std::vector<uint8_t *> vectors;\n')
-    fw.write('extern std::vector<uint16_t> vectors_identifiers;\n')
     fw.write('extern std::vector<int> vectors_sizes;\n\n')
 
 

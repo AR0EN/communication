@@ -10,7 +10,7 @@
 #include "Message.hpp"
 #include "TcpServer.hpp"
 
-comm::csize_t comm::TcpServer::send(std::shared_ptr<comm::Message> pMessage) {
+comm::csize_t comm::TcpServer::send(std::shared_ptr<comm::IMessage> pMessage) {
     int errorCode = -1;
 
     // Check socket setup
@@ -60,7 +60,7 @@ comm::csize_t comm::TcpServer::send(std::shared_ptr<comm::Message> pMessage) {
     return ret;
 }
 
-bool comm::TcpServer::subscribe(const std::shared_ptr<NetObserver>& pObserver) {
+bool comm::TcpServer::subscribe(const std::shared_ptr<IObserver>& pObserver) {
     if (nullptr == pObserver) {
         return false;
     } else {

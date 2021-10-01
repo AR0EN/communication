@@ -1,6 +1,15 @@
 #ifndef _TCP_CLIENT_HPP_
 #define _TCP_CLIENT_HPP_
 
+#include "common.hpp"
+#include "Encoder.hpp"
+#include "Message.hpp"
+
+#include <atomic>
+#include <memory>
+#include <thread>
+#include <vector>
+
 #include <stdio.h>
 #include <stdint.h>
 #include <unistd.h>
@@ -8,22 +17,7 @@
 #include <sys/socket.h>
 #include <sys/time.h>
 
-#include <atomic>
-#include <memory>
-#include <thread>
-#include <vector>
-
-#include "common.hpp"
-#include "Encoder.hpp"
-#include "Message.hpp"
-
 namespace comm {
-
-class NetObserver {
-public:
-    virtual ~NetObserver() {}
-    virtual void onRecv(const std::shared_ptr<NetMessage>& pMessage) = 0;
-}; // class Observer
 
 class TcpClient : public DecodingObserver, public std::enable_shared_from_this<TcpClient> {
 public:
@@ -94,10 +88,10 @@ public:
         printf("TcpClient has been finalized!\n");
     }
 
-    csize_t send(std::shared_ptr<Message> pMessage);
+    csize_t send(std::shared_ptr<IMessage> pMessage);
 
     bool start();
-    bool subscribe(const std::shared_ptr<NetObserver>& pObserver);
+    bool subscribe(const std::shared_ptr<IObserver>& pObserver);
     // void unsubscribe() = 0;
 
     // DecodingObserver implementation
@@ -105,7 +99,7 @@ public:
         if (pData) {
             uint8_t * tmp = pData.get();
 
-            std::shared_ptr<NetMessage> pMessage(new NetMessage());
+            std::shared_ptr<Message> pMessage(new Message());
             pMessage->deserialize(tmp, size);
 
             notify(pMessage);
@@ -113,7 +107,7 @@ public:
     }
 
 private:
-    void notify (const std::shared_ptr<NetMessage>& pMessage) {
+    void notify (const std::shared_ptr<Message>& pMessage) {
         for (auto pObserver : mObservers) {
             pObserver->onRecv(pMessage);
         }
@@ -127,7 +121,7 @@ private:
     uint8_t mRxBuffer[MAX_PAYLOAD_SIZE << 1];
 
     std::shared_ptr<Decoder> pDecoder;
-    std::vector<std::shared_ptr<NetObserver>> mObservers;
+    std::vector<std::shared_ptr<IObserver>> mObservers;
 
     std::unique_ptr<std::thread> pThread;
     std::atomic<bool> mExitFlag;

@@ -1,13 +1,13 @@
 #ifndef _ENCODER_HPP_
 #define _ENCODER_HPP_
 
-#include <stdint.h>
-#include <string.h>
+#include "common.hpp"
 
 #include <memory>
 #include <vector>
 
-#include "common.hpp"
+#include <stdint.h>
+#include <string.h>
 
 namespace comm {
 
