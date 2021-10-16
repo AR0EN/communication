@@ -18,7 +18,7 @@ void comm::Decoder::subscribe(const std::shared_ptr<comm::DecodingObserver>& pOb
 
 void comm::Decoder::notify() {
     if (nullptr != pPayload) {
-        std::shared_ptr<uint8_t> payload(new uint8_t[mPayloadSize], std::default_delete<uint8_t[]> ());
+        std::unique_ptr<uint8_t> payload(new uint8_t[mPayloadSize]);
         memcpy(payload.get(), pPayload, mPayloadSize);
         for (auto pObserver : mObservers) {
             if (pObserver) {

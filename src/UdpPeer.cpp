@@ -89,7 +89,7 @@ bool comm::UdpPeer::start() {
     }
 
     if (nullptr == pThread) {
-        pDecoder = std::make_shared<comm::Decoder>();
+        pDecoder.reset(new comm::Decoder());
         pDecoder->subscribe(shared_from_this());
 
         pThread.reset(new std::thread(&comm::UdpPeer::run, this));

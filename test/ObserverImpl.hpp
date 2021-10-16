@@ -7,7 +7,7 @@ class ObserverImpl : public comm::IObserver {
 public:
     ObserverImpl() {}
     ~ObserverImpl() {}
-    void onRecv(const std::shared_ptr<comm::Message>& pMessage) {
+    void onRecv(const std::unique_ptr<comm::Message>& pMessage) override {
         if (nullptr != pMessage) {
             pMessage->dump();
         }

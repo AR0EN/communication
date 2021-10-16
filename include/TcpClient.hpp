@@ -95,11 +95,11 @@ public:
     // void unsubscribe() = 0;
 
     // DecodingObserver implementation
-    void onComplete(const std::shared_ptr<uint8_t>& pData, int size) {
+    void onComplete(const std::unique_ptr<uint8_t>& pData, int size) {
         if (pData) {
             uint8_t * tmp = pData.get();
 
-            std::shared_ptr<Message> pMessage(new Message());
+            std::unique_ptr<Message> pMessage(new Message());
             pMessage->deserialize(tmp, size);
 
             notify(pMessage);
@@ -107,7 +107,7 @@ public:
     }
 
 private:
-    void notify (const std::shared_ptr<Message>& pMessage) {
+    void notify (const std::unique_ptr<Message>& pMessage) {
         for (auto pObserver : mObservers) {
             pObserver->onRecv(pMessage);
         }
@@ -120,7 +120,7 @@ private:
 
     uint8_t mRxBuffer[MAX_PAYLOAD_SIZE << 1];
 
-    std::shared_ptr<Decoder> pDecoder;
+    std::unique_ptr<Decoder> pDecoder;
     std::vector<std::shared_ptr<IObserver>> mObservers;
 
     std::unique_ptr<std::thread> pThread;

@@ -20,7 +20,7 @@ int main(int argc, char ** argv) {
     }
 
     std::shared_ptr<comm::UdpPeer> pPeer(new comm::UdpPeer(atoi(argv[1])));
-    std::shared_ptr<comm::IObserver> pObserver(new ObserverImpl());
+    std::shared_ptr<comm::IObserver> pObserver = std::make_shared<ObserverImpl>();
     pPeer->subscribe(pObserver);
     pPeer->start();
 

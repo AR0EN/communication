@@ -19,7 +19,7 @@ int main(int argc, char ** argv) {
     }
 
     std::shared_ptr<comm::TcpServer> pTcpServer(new comm::TcpServer(atoi(argv[1])));
-    std::shared_ptr<comm::IObserver> pObserver(new ObserverImpl());
+    std::shared_ptr<comm::IObserver> pObserver = std::make_shared<ObserverImpl>();
     pTcpServer->subscribe(pObserver);
     pTcpServer->start();
 

@@ -83,7 +83,7 @@ private:
 class IObserver {
 public:
     virtual ~IObserver() {}
-    virtual void onRecv(const std::shared_ptr<Message>& pMessage) = 0;
+    virtual void onRecv(const std::unique_ptr<Message>& pMessage) = 0;
 }; // class IObserver
 
 } // namespace comm
