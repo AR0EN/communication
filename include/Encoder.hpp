@@ -42,7 +42,7 @@ enum DECODING_STATES {
 class DecodingObserver {
 public:
     virtual ~DecodingObserver() {}
-    virtual void onComplete(const std::unique_ptr<uint8_t>& pData, csize_t size) = 0;
+    virtual void onComplete(const std::unique_ptr<uint8_t[]>& pData, csize_t size) = 0;
 };
 
 class Decoder {

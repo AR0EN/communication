@@ -85,14 +85,14 @@ public:
         printf("Finalized!\n");
     }
 
-    csize_t send(const char * ipAddress, uint16_t port, std::shared_ptr<IMessage> pMessage);
+    csize_t send(const char * ipAddress, uint16_t port, const std::shared_ptr<IMessage> pMessage);
 
     bool start();
     bool subscribe(const std::shared_ptr<IObserver>& pObserver);
     // void unsubscribe() = 0;
 
     // DecodingObserver implementation
-    void onComplete(const std::unique_ptr<uint8_t>& pData, int size) override {
+    void onComplete(const std::unique_ptr<uint8_t[]>& pData, csize_t size) override {
         if (pData) {
             uint8_t * tmp = pData.get();
 

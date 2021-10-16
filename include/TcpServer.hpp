@@ -108,7 +108,7 @@ public:
     // void unsubscribe() = 0;
 
     // DecodingObserver implementation
-    void onComplete(const std::unique_ptr<uint8_t>& pData, int size) {
+    void onComplete(const std::unique_ptr<uint8_t[]>& pData, csize_t size) {
         if (pData) {
             uint8_t * tmp = pData.get();
 
