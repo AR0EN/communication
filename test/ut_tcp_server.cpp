@@ -26,11 +26,11 @@ int main(int argc, char ** argv) {
     printf("Press enter to continue!\n");
     getchar();
 
+    comm::Message message;
     for (int i = 0; i < vectors.size(); i++) {
         int index = vectors.size() - i - 1;
-        std::shared_ptr<comm::Message> pMessage(new comm::Message());
-        pMessage->update(vectors[index], vectors_sizes[index]);
-        pTcpServer->send(pMessage);
+        message.update(vectors[index], vectors_sizes[index]);
+        pTcpServer->send(message);
     }
 
     printf("Press enter to exit!\n");

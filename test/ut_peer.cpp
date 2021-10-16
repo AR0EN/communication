@@ -27,10 +27,10 @@ int main(int argc, char ** argv) {
     printf("Press enter to continue!\n");
     getchar();
 
+    comm::Message message;
     for (int i = 0; i < vectors.size(); i++) {
-        std::shared_ptr<comm::Message> pMessage(new comm::Message());
-        pMessage->update(vectors[i], vectors_sizes[i]);
-        pPeer->send(argv[2], atoi(argv[3]), pMessage);
+        message.update(vectors[i], vectors_sizes[i]);
+        pPeer->send(argv[2], atoi(argv[3]), message);
     }
 
     printf("Press enter to exit!\n");

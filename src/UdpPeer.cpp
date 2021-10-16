@@ -11,7 +11,7 @@
 #include "UdpPeer.hpp"
 
 comm::csize_t comm::UdpPeer::send(
-    const char * ipAddress, uint16_t port, std::shared_ptr<comm::IMessage> pMessage) {
+    const char * ipAddress, const uint16_t& port, comm::IMessage& message) {
 
     int errorCode = -1;
 
@@ -23,28 +23,22 @@ comm::csize_t comm::UdpPeer::send(
     errorCode--;
 
     // Prepare data for transmission
-    if (nullptr == pMessage) {
+    std::unique_ptr<uint8_t[]> pSerializedData;
+    csize_t serializedSize;
+
+    message.serialize(pSerializedData, serializedSize);
+
+    if (!pSerializedData) {
         return errorCode;
     }
     errorCode--;
 
-    uint8_t * pSerializedData;
-    int serializedSize;
-
-    pMessage->serialize(pSerializedData, serializedSize);
-
-    if (nullptr == pSerializedData) {
-        return errorCode;
-    }
-    errorCode--;
-
-    uint8_t * pEncodedData;
-    int encodedSize;
+    std::unique_ptr<uint8_t[]> pEncodedData;
+    csize_t encodedSize;
 
     comm::encode(pSerializedData, serializedSize, pEncodedData, encodedSize);
 
-    delete[] pSerializedData;
-    if (nullptr == pEncodedData) {
+    if (!pEncodedData) {
         return errorCode;
     }
     errorCode--;
@@ -58,7 +52,7 @@ comm::csize_t comm::UdpPeer::send(
     // Send data over UDP
     int ret = sendto( \
                 mSocketFd, \
-                pEncodedData, encodedSize, 0, \
+                pEncodedData.get(), encodedSize, 0, \
                 (struct sockaddr *)&peerAddr, sizeof(peerAddr));
 
     if (0 > ret) {
@@ -66,16 +60,14 @@ comm::csize_t comm::UdpPeer::send(
         ret = errorCode;
     }
 
-    delete[] pEncodedData;
-
     return ret;
 }
 
 bool comm::UdpPeer::subscribe(const std::shared_ptr<IObserver>& pObserver) {
-    if (nullptr == pObserver) {
-        return false;
-    } else {
+    if (pObserver) {
         mObservers.push_back(pObserver);
+    } else {
+        return false;
     }
 
     return true;
@@ -88,7 +80,7 @@ bool comm::UdpPeer::start() {
         return false;
     }
 
-    if (nullptr == pThread) {
+    if (!pThread) {
         pDecoder.reset(new comm::Decoder());
         pDecoder->subscribe(shared_from_this());
 

@@ -63,7 +63,6 @@ public:
 
         printf("Connection has been established with %s/%d\n", serverAddr, mRemotePort);
 
-        pThread = nullptr;
         mExitFlag = false;
     }
 
@@ -75,9 +74,9 @@ public:
     void stop() {
         mExitFlag = true;
 
-        if ((nullptr != pThread) && (pThread->joinable())) {
+        if ((pThread) && (pThread->joinable())) {
             pThread->join();
-            pThread = nullptr;
+            pThread.reset();
         }
 
         if (0 <= mSocketFd) {
@@ -88,19 +87,17 @@ public:
         printf("TcpClient has been finalized!\n");
     }
 
-    csize_t send(std::shared_ptr<IMessage> pMessage);
+    csize_t send(IMessage& message);
 
     bool start();
     bool subscribe(const std::shared_ptr<IObserver>& pObserver);
     // void unsubscribe() = 0;
 
     // DecodingObserver implementation
-    void onComplete(const std::unique_ptr<uint8_t[]>& pData, csize_t size) {
+    void onComplete(const std::unique_ptr<uint8_t[]>& pData, const csize_t& size) {
         if (pData) {
-            uint8_t * tmp = pData.get();
-
             std::unique_ptr<Message> pMessage(new Message());
-            pMessage->deserialize(tmp, size);
+            pMessage->deserialize(pData, size);
 
             notify(pMessage);
         }

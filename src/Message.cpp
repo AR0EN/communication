@@ -4,30 +4,29 @@
 
 namespace comm {
 
-bool Message::serialize(uint8_t *& pSerializedData, int& serializedSize) {
-    if (nullptr == pData) {
+bool Message::serialize(std::unique_ptr<uint8_t[]>& pSerializedData, int& serializedSize) {
+    if (!pData) {
         printf("Message is empty!\n");
         return false;
     }
 
     std::lock_guard<std::mutex> lock(mDataMutex);
-    pSerializedData = new uint8_t[mDataSize];
-    memcpy(pSerializedData, pData, mDataSize);
+    pSerializedData.reset(new uint8_t[mDataSize]);
+    memcpy(pSerializedData.get(), pData.get(), mDataSize);
     serializedSize = mDataSize;
 
     return true;
 }
 
-bool Message::deserialize(uint8_t * pSerializedData, int serializedSize) {
-    if ((nullptr != pSerializedData) && (0 < serializedSize)) {
+bool Message::deserialize(const std::unique_ptr<uint8_t[]>& pSerializedData, const int& serializedSize) {
+    if ((pSerializedData) && (0 < serializedSize)) {
         std::lock_guard<std::mutex> lock(mDataMutex);
 
         mDataSize = serializedSize;
 
-        reset();
-        pData = new uint8_t[mDataSize];
+        pData.reset(new uint8_t[mDataSize]);
         printf("Allocated %d bytes for data buffer!\n", mDataSize);
-        memcpy(pData, pSerializedData, mDataSize);
+        memcpy(pData.get(), pSerializedData.get(), mDataSize);
 
         return true;
     } else {
@@ -36,15 +35,13 @@ bool Message::deserialize(uint8_t * pSerializedData, int serializedSize) {
     }
 }
 
-bool Message::update(uint8_t * pData, int size) {
-    if ((nullptr != pData) && (0 < size) && comm::ValidatePayloadSize(size)) {
+bool Message::update(const uint8_t * pData, const int& size) {
+    if ((nullptr != pData) && comm::ValidatePayloadSize(size)) {
         std::lock_guard<std::mutex> lock(mDataMutex);
         this->mDataSize = size;
 
-        reset();
-
-        this->pData = new uint8_t[this->mDataSize];
-        memcpy(this->pData, pData, this->mDataSize);
+        this->pData.reset(new uint8_t[this->mDataSize]);
+        memcpy(this->pData.get(), pData, this->mDataSize);
 
         return true;
     } else {
@@ -62,7 +59,7 @@ void Message::dump() {
         int i;
         std::lock_guard<std::mutex> lock(mDataMutex);
         for (i = 0; (i < mDataSize) && (i < 8); i++) {
-            printf("0x%02X ", (int)pData[i] & 0x000000FF);
+            printf("0x%02X ", (int)*(pData.get() + i) & 0x000000FF);
         }
 
         if (i < mDataSize) {

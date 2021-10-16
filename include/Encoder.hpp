@@ -11,20 +11,23 @@
 
 namespace comm {
 
-inline bool encode(uint8_t * pData, csize_t size, uint8_t *& pEncodedData, csize_t& encodedSize) {
-    if ((nullptr != pData) && ValidatePayloadSize(size)) {
+inline bool encode(
+    const std::unique_ptr<uint8_t[]>& pData, const csize_t& size,
+    std::unique_ptr<uint8_t[]>& pEncodedData, csize_t& encodedSize) {
+
+    if ((pData) && ValidatePayloadSize(size)) {
         encodedSize = sizeof(SF) + sizeof(csize_t) + size + sizeof(EF);
-        pEncodedData = new uint8_t[encodedSize];
+        pEncodedData.reset(new uint8_t[encodedSize]);
 
         int index = 0;
-        pEncodedData[index++] = SF;
-        memcpy(pEncodedData + index, &size, sizeof(size));
+        *(pEncodedData.get() + index++) = SF;
+        memcpy(pEncodedData.get() + index, &size, sizeof(size));
         index += sizeof(encodedSize);
 
-        memcpy(pEncodedData + index, pData, size);
+        memcpy(pEncodedData.get() + index, pData.get(), size);
         index += size;
 
-        pEncodedData[index] = EF;
+        *(pEncodedData.get() + index) = EF;
 
         return true;
     }
@@ -42,7 +45,7 @@ enum DECODING_STATES {
 class DecodingObserver {
 public:
     virtual ~DecodingObserver() {}
-    virtual void onComplete(const std::unique_ptr<uint8_t[]>& pData, csize_t size) = 0;
+    virtual void onComplete(const std::unique_ptr<uint8_t[]>& pData, const csize_t& size) = 0;
 };
 
 class Decoder {

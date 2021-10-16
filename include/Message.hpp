@@ -15,19 +15,18 @@ namespace comm {
 class IMessage {
 public:
     virtual ~IMessage() {}
-    virtual bool serialize(uint8_t *& pSerializedData, int& serializedSize) = 0;
-    virtual bool deserialize(uint8_t * pSerializedData, int serializedSize) = 0;
+    virtual bool serialize(std::unique_ptr<uint8_t[]>& pSerializedData, int& serializedSize) = 0;
+    virtual bool deserialize(const std::unique_ptr<uint8_t[]>& pSerializedData, const int& serializedSize) = 0;
 }; // class IMessage
 
 class Message: public IMessage {
 public:
-    Message() : mDataSize(0), pData(nullptr) {}
+    Message() : mDataSize(0) {}
     Message(const Message &other)  noexcept {
         copy(other);
     }
 
     Message& operator = (const Message& other) {
-        reset();
         copy(other);
         return *this;
     }
@@ -38,43 +37,32 @@ public:
 
     Message& operator = (Message&& other) {
         if (&other != this) {
-            reset();
-            this->pData = other.pData;
+            this->pData = std::move(other.pData);
             this->mDataSize = other.mDataSize;
 
-            other.pData = nullptr;
             other.mDataSize = 0;
         }
 
         return *this;
     }
 
-    ~Message() {
-        reset();
-    }
+    ~Message() { }
 
-    bool update(uint8_t * pData, int size);
+    bool update(const uint8_t* pData, const int& size);
     void dump();
 
-    bool serialize(uint8_t *& pSerializedData, int& serializedSize) override;
-    bool deserialize(uint8_t * pSerializedData, int serializedSize) override;
+    bool serialize(std::unique_ptr<uint8_t[]>& pSerializedData, int& serializedSize) override;
+    bool deserialize(const std::unique_ptr<uint8_t[]>& pSerializedData, const int& serializedSize) override;
 
 private:
     void copy(const Message &other) {
         std::lock_guard<std::mutex> lock(mDataMutex);
         this->mDataSize = other.mDataSize;
-        this->pData = new uint8_t[this->mDataSize];
-        memcpy(this->pData, other.pData, this->mDataSize);
+        this->pData.reset(new uint8_t[this->mDataSize]);
+        memcpy(this->pData.get(), other.pData.get(), this->mDataSize);
     }
 
-    void reset() {
-        if (nullptr != pData) {
-            delete[] pData;
-            pData = nullptr;
-        }
-    }
-
-    uint8_t * pData;
+    std::unique_ptr<uint8_t[]> pData;
     int mDataSize;
 
     std::mutex mDataMutex;

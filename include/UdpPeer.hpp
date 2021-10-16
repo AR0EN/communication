@@ -60,7 +60,6 @@ public:
 
         printf("Bound at port %d\n", mRxPort);
 
-        pThread = nullptr;
         mExitFlag = false;
     }
 
@@ -72,9 +71,9 @@ public:
     void stop() {
         mExitFlag = true;
 
-        if ((nullptr != pThread) && (pThread->joinable())) {
+        if ((pThread) && (pThread->joinable())) {
             pThread->join();
-            pThread = nullptr;
+            pThread.reset();
         }
 
         if (0 <= mSocketFd) {
@@ -85,19 +84,17 @@ public:
         printf("Finalized!\n");
     }
 
-    csize_t send(const char * ipAddress, uint16_t port, const std::shared_ptr<IMessage> pMessage);
+    csize_t send(const char * ipAddress, const uint16_t& port, IMessage& message);
 
     bool start();
     bool subscribe(const std::shared_ptr<IObserver>& pObserver);
     // void unsubscribe() = 0;
 
     // DecodingObserver implementation
-    void onComplete(const std::unique_ptr<uint8_t[]>& pData, csize_t size) override {
+    void onComplete(const std::unique_ptr<uint8_t[]>& pData, const csize_t& size) override {
         if (pData) {
-            uint8_t * tmp = pData.get();
-
             std::unique_ptr<Message> pMessage(new Message());
-            pMessage->deserialize(tmp, size);
+            pMessage->deserialize(pData, size);
 
             notify(pMessage);
         }

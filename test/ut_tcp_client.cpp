@@ -23,11 +23,11 @@ int main(int argc, char ** argv) {
     pTcpClient->subscribe(pObserver);
     pTcpClient->start();
 
+    comm::Message message;
     for (int i = 0; i < vectors.size(); i++) {
         int index = vectors.size() - i - 1;
-        std::shared_ptr<comm::Message> pMessage(new comm::Message());
-        pMessage->update(vectors[index], vectors_sizes[index]);
-        pTcpClient->send(pMessage);
+        message.update(vectors[index], vectors_sizes[index]);
+        pTcpClient->send(message);
     }
 
     printf("Press enter to exit!\n");
