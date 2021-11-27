@@ -81,7 +81,8 @@ private:
         {
             static int size_byte_pos = 0;
 
-            mPayloadSize |= ((csize_t)b & 0x000000FF) << size_byte_pos++;
+            mPayloadSize |= ((csize_t)b & 0x000000FF) << (size_byte_pos << 3);
+            size_byte_pos++;
 
             if (sizeof(mPayloadSize) <= (uint16_t)size_byte_pos) {
                 size_byte_pos = 0;
