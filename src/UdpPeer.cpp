@@ -10,7 +10,7 @@
 #include "Message.hpp"
 #include "UdpPeer.hpp"
 
-comm::csize_t comm::UdpPeer::send(
+comm::size_t comm::UdpPeer::send(
     const char * ipAddress, const uint16_t& port, comm::IMessage& message) {
 
     int errorCode = -1;
@@ -24,7 +24,7 @@ comm::csize_t comm::UdpPeer::send(
 
     // Prepare data for transmission
     std::unique_ptr<uint8_t[]> pSerializedData;
-    csize_t serializedSize;
+    size_t serializedSize;
 
     message.serialize(pSerializedData, serializedSize);
 
@@ -34,7 +34,7 @@ comm::csize_t comm::UdpPeer::send(
     errorCode--;
 
     std::unique_ptr<uint8_t[]> pEncodedData;
-    csize_t encodedSize;
+    size_t encodedSize;
 
     comm::encode(pSerializedData, serializedSize, pEncodedData, encodedSize);
 

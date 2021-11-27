@@ -1,10 +1,8 @@
-#include "Message.hpp"
+#include "MessageImpl.hpp"
 
 #include <cstring>
 
-namespace comm {
-
-bool Message::serialize(std::unique_ptr<uint8_t[]>& pSerializedData, int& serializedSize) {
+bool MessageImpl::serialize(std::unique_ptr<uint8_t[]>& pSerializedData, int& serializedSize) {
     if (!pData) {
         printf("Message is empty!\n");
         return false;
@@ -18,7 +16,7 @@ bool Message::serialize(std::unique_ptr<uint8_t[]>& pSerializedData, int& serial
     return true;
 }
 
-bool Message::deserialize(const std::unique_ptr<uint8_t[]>& pSerializedData, const int& serializedSize) {
+bool MessageImpl::deserialize(const std::unique_ptr<uint8_t[]>& pSerializedData, const int& serializedSize) {
     if ((pSerializedData) && (0 < serializedSize)) {
         std::lock_guard<std::mutex> lock(mDataMutex);
 
@@ -35,7 +33,7 @@ bool Message::deserialize(const std::unique_ptr<uint8_t[]>& pSerializedData, con
     }
 }
 
-bool Message::update(const uint8_t * pData, const int& size) {
+bool MessageImpl::update(const uint8_t * pData, const int& size) {
     if ((nullptr != pData) && comm::validate_payload_size(size)) {
         std::lock_guard<std::mutex> lock(mDataMutex);
         this->mDataSize = size;
@@ -50,7 +48,7 @@ bool Message::update(const uint8_t * pData, const int& size) {
     }
 }
 
-void Message::dump() {
+void MessageImpl::dump() const {
     printf("Message:\n");
     printf("* Data length: %d\n", mDataSize);
     printf("* Data: ");
@@ -69,5 +67,3 @@ void Message::dump() {
 
     printf("\n\n");
 }
-
-} // namespace comm

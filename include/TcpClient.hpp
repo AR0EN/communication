@@ -87,14 +87,14 @@ public:
         printf("TcpClient has been finalized!\n");
     }
 
-    csize_t send(IMessage& message);
+    size_t send(IMessage& message);
 
     bool start();
     bool subscribe(const std::shared_ptr<IObserver>& pObserver);
     // void unsubscribe() = 0;
 
     // DecodingObserver implementation
-    void onComplete(const std::unique_ptr<uint8_t[]>& pData, const csize_t& size) {
+    void onComplete(const std::unique_ptr<uint8_t[]>& pData, const size_t& size) {
         if (pData) {
             std::unique_ptr<Message> pMessage(new Message());
             pMessage->deserialize(pData, size);

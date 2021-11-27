@@ -4,7 +4,7 @@
 
 #include "Encoder.hpp"
 
-void comm::Decoder::feed(uint8_t * pData, csize_t size) {
+void comm::Decoder::feed(uint8_t * pData, size_t size) {
     for (int i = 0; i < size; i++) {
         proceed(pData[i]);
     }

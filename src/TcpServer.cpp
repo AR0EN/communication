@@ -10,7 +10,7 @@
 #include "Message.hpp"
 #include "TcpServer.hpp"
 
-comm::csize_t comm::TcpServer::send(comm::IMessage& message) {
+comm::size_t comm::TcpServer::send(comm::IMessage& message) {
     int errorCode = -1;
 
     // Check socket setup
@@ -23,7 +23,7 @@ comm::csize_t comm::TcpServer::send(comm::IMessage& message) {
 
     // Prepare data for transmission
     std::unique_ptr<uint8_t[]> pSerializedData;
-    csize_t serializedSize;
+    size_t serializedSize;
 
     message.serialize(pSerializedData, serializedSize);
 
@@ -33,7 +33,7 @@ comm::csize_t comm::TcpServer::send(comm::IMessage& message) {
     errorCode--;
 
     std::unique_ptr<uint8_t[]> pEncodedData;
-    csize_t encodedSize;
+    size_t encodedSize;
 
     comm::encode(pSerializedData, serializedSize, pEncodedData, encodedSize);
 

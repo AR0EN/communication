@@ -1,33 +1,48 @@
-#ifndef _ENCODER_HPP_
-#define _ENCODER_HPP_
+#ifndef __ENCODER_HPP__
+#define __ENCODER_HPP__
 
-#include "common.hpp"
-
+#include <cstdint>
+#include <cstring>
 #include <memory>
 #include <vector>
 
-#include <stdint.h>
-#include <string.h>
+#include "common.hpp"
+#include "Packet.hpp"
+#include "SyncQueue.hpp"
 
 namespace comm {
 
 inline bool encode(
-    const std::unique_ptr<uint8_t[]>& pData, const csize_t& size,
-    std::unique_ptr<uint8_t[]>& pEncodedData, csize_t& encodedSize) {
+    const std::unique_ptr<uint8_t[]>& pData, const size_t& size,
+    std::unique_ptr<uint8_t[]>& pEncodedData, size_t& encodedSize) {
 
-    if ((pData) && ValidatePayloadSize(size)) {
-        encodedSize = sizeof(SF) + sizeof(csize_t) + size + sizeof(EF);
+    if ((pData) && validate_payload_size(size)) {
+        encodedSize = sizeof(SF) + sizeof(size_t) + size + sizeof(EF);
         pEncodedData.reset(new uint8_t[encodedSize]);
 
-        int index = 0;
-        *(pEncodedData.get() + index++) = SF;
-        memcpy(pEncodedData.get() + index, &size, sizeof(size));
-        index += sizeof(encodedSize);
+        // Note: hard-coded to maximize performance!
+        // 1. Start Frame
+        uint8_t * internal_pointer = pEncodedData.get();
+        *(internal_pointer++) = SF;
 
-        memcpy(pEncodedData.get() + index, pData.get(), size);
-        index += size;
+        // 2. Size (in bytes) of payload
+        size_t tmp = size;
+        *(internal_pointer++) = static_cast<uint8_t>(tmp & 0xFF);
 
-        *(pEncodedData.get() + index) = EF;
+        tmp = tmp >> 8;
+        *(internal_pointer++) = static_cast<uint8_t>(tmp & 0xFF);
+
+        tmp = tmp >> 8;
+        *(internal_pointer++) = static_cast<uint8_t>(tmp & 0xFF);
+
+        tmp = tmp >> 8;
+        *(internal_pointer++) = static_cast<uint8_t>(tmp & 0xFF);
+
+        // 3. Payload
+        memcpy(internal_pointer, pData.get(), size);
+
+        // 4. End Frame
+        *(internal_pointer + size) = EF;
 
         return true;
     }
@@ -42,107 +57,96 @@ enum DECODING_STATES {
     E_VALIDATION
 };
 
-class DecodingObserver {
-public:
-    virtual ~DecodingObserver() {}
-    virtual void onComplete(const std::unique_ptr<uint8_t[]>& pData, const csize_t& size) = 0;
-};
-
 class Decoder {
-public:
-    Decoder() {
-        mState = E_SF;
-        pPayload = nullptr;
-    }
+ public:
+    Decoder(): mState(E_SF) {}
 
-    ~Decoder() {
+    virtual ~Decoder() {
         resetBuffer();
     }
 
     void feed(uint8_t * pData, int size);
 
-    void subscribe(const std::shared_ptr<DecodingObserver>& pObserver);
-    // void unsubscribe();
-
-private:
+ private:
     inline void proceed(uint8_t b) {
+        static int64_t timestampUs = -1L;
         switch (mState)
         {
-        case E_SF:
-            if (SF == b) {
-                resetBuffer();
-                mState = E_SIZE;
-            } else {
-                // Discard
-            }
-            break;
-
-        case E_SIZE:
-        {
-            static int size_byte_pos = 0;
-
-            mPayloadSize |= ((csize_t)b & 0x000000FF) << (size_byte_pos << 3);
-            size_byte_pos++;
-
-            if (sizeof(mPayloadSize) <= (uint16_t)size_byte_pos) {
-                size_byte_pos = 0;
-
-                if (ValidatePayloadSize(mPayloadSize)) {
-                    pPayload = new uint8_t[mPayloadSize];
-                    mState = E_PAYLOAD;
+            case E_SF:
+                if (SF == b) {
+                    resetBuffer();
+                    timestampUs = get_monotonic_us();
+                    mState = E_SIZE;
                 } else {
-                    // Invalid payload size!
-                    mState = E_SF;
+                    // Discard
+                }
+                break;
+
+            case E_SIZE:
+            {
+                static int size_byte_pos = 0;
+
+                mPayloadSize |= (static_cast<size_t>(b) & 0x000000FF) << (size_byte_pos << 3);
+                size_byte_pos++;
+
+                if (sizeof(mPayloadSize) <= (uint16_t)size_byte_pos) {
+                    size_byte_pos = 0;
+
+                    if (validate_payload_size(mPayloadSize)) {
+                        mpPayload.reset(new uint8_t[mPayloadSize]);
+                        mState = E_PAYLOAD;
+                    } else {
+                        // Invalid payload size!
+                        mState = E_SF;
+                    }
                 }
             }
-        }
-            break;
+                break;
 
-        case E_PAYLOAD:
-        {
-            static int payload_byte_pos = 0;
+            case E_PAYLOAD:
+            {
+                static int payload_byte_pos = 0;
 
-            pPayload[payload_byte_pos++] = b;
-            if (mPayloadSize <= payload_byte_pos) {
-                payload_byte_pos = 0;
-                mState = E_VALIDATION;
+                mpPayload[payload_byte_pos++] = b;
+                if (mPayloadSize <= payload_byte_pos) {
+                    payload_byte_pos = 0;
+                    mState = E_VALIDATION;
+                }
             }
-        }
-            break;
+                break;
 
-        case E_VALIDATION:
-        {
-            if (EF == b) {
-                notify();
+            case E_VALIDATION:
+            {
+                if (EF == b) {
+                    // Save the frame
+                    mDecodedQueue.enqueue(
+                        Packet::create(
+                            mpPayload, mPayloadSize, timestampUs
+                        )
+                    );
+                }
             }
-        }
-            // break;
+                // break;
 
-        default:
-            mState = E_SF;
-            break;
+            default:
+                mState = E_SF;
+                break;
         }
     }
 
-    void notify();
-
-    void resetBuffer() {
-        if (nullptr != pPayload) {
-            delete[] pPayload;
-            pPayload = nullptr;
-        }
-
+    inline void resetBuffer() {
+        mpPayload.reset();
         mPayloadSize = 0;
     }
 
     DECODING_STATES mState;
-    csize_t mPayloadSize;
-    uint8_t * pPayload;
 
-    std::vector<std::shared_ptr<DecodingObserver>> mObservers;
+    size_t mPayloadSize;
+    std::unique_ptr<uint8_t[]> mpPayload;
 
+    dstruct::SyncQueue<Packet> mDecodedQueue;
 };  // class Decoder
 
-};  // namespace comm
+}   // namespace comm
 
-#endif // _ENCODER_HPP_
+#endif // __ENCODER_HPP__
