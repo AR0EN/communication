@@ -65,10 +65,18 @@ class Decoder {
         resetBuffer();
     }
 
-    void feed(uint8_t * pData, int size);
+    inline void feed(const std::unique_ptr<uint8_t[]>& pdata, const int& size) {
+        for (int i = 0; i < size; i++) {
+            proceed(pdata[i]);
+        }
+    }
+
+    bool dequeue(std::vector<std::unique_ptr<Packet>>& packets) {
+        return mDecodedQueue.dequeue(packets);
+    }
 
  private:
-    inline void proceed(uint8_t b) {
+    inline void proceed(const uint8_t& b) {
         static int64_t timestampUs = -1L;
         switch (mState)
         {
@@ -105,7 +113,7 @@ class Decoder {
 
             case E_PAYLOAD:
             {
-                static int payload_byte_pos = 0;
+                static size_t payload_byte_pos = 0;
 
                 mpPayload[payload_byte_pos++] = b;
                 if (mPayloadSize <= payload_byte_pos) {

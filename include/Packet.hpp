@@ -38,7 +38,7 @@ class Packet {
 
     virtual ~Packet() {}
 
-    static std::unique_ptr<Packet>& create(
+    static std::unique_ptr<Packet> create(
         const std::unique_ptr<uint8_t[]>& pPayload,
         const size_t& payloadSize,
         const int64_t& timestampUs=-1) {
@@ -49,6 +49,18 @@ class Packet {
         } else {
             return std::unique_ptr<Packet>(nullptr);
         }
+    }
+
+    const std::unique_ptr<uint8_t[]>& getPayload() {
+        return mpPayload;
+    }
+
+    const size_t& getPayloadSize() {
+        return mPayloadSize;
+    }
+
+    const int64_t& getTimestampUs() {
+        return mTimestampUs;
     }
 
  protected:
