@@ -2,9 +2,11 @@
 #define __ENCODER_HPP__
 
 #include <cstdint>
+
 #ifdef DEBUG
 #include <cstdio>
 #endif  // DEBUG
+
 #include <cstring>
 #include <memory>
 #include <vector>
@@ -92,8 +94,8 @@ class Decoder {
         }
     }
 
-    bool dequeue(std::vector<std::unique_ptr<Packet>>& packets) {
-        return mDecodedQueue.dequeue(packets);
+    bool dequeue(std::vector<std::unique_ptr<Packet>>& pPackets) {
+        return mDecodedQueue.dequeue(pPackets);
     }
 
  private:
@@ -167,11 +169,9 @@ class Decoder {
             {
                 if (EF == b) {
                     // Save the frame
-                    mDecodedQueue.enqueue(
-                        Packet::create(
-                            mpPayload, mPayloadSize, timestampUs
-                        )
-                    );
+                    std::unique_ptr<Packet> pPacket = Packet::create(mpPayload, mPayloadSize, timestampUs);
+                    mDecodedQueue.enqueue(pPacket);
+                    // mDecodedQueue.enqueue(Packet::create(mpPayload, mPayloadSize, timestampUs));
 #ifdef DEBUG
                     printf("[%s][%d] Decoded a packet with %lu bytes payload at %ld (us)!\n",
                         __func__, __LINE__, mPayloadSize, timestampUs

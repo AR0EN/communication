@@ -33,6 +33,7 @@ class Packet {
         return *this;
     }
 
+    Packet() = delete;
     Packet(const Packet&) = delete;
     Packet& operator=(const Packet&) = delete;
 

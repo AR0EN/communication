@@ -18,6 +18,8 @@ constexpr size_t SIZE_OF_PAYLOAD_SIZE  = 4;
 
 constexpr size_t MAX_PAYLOAD_SIZE      = 1024;  // Avoid network fragmentation
 
+constexpr size_t MAX_FRAME_SIZE        = SF_SIZE + SIZE_OF_PAYLOAD_SIZE + MAX_PAYLOAD_SIZE + EF_SIZE;
+
 inline bool validate_payload_size(const size_t& payload_size) {
     return (MAX_PAYLOAD_SIZE >= (SF_SIZE + SIZE_OF_PAYLOAD_SIZE + payload_size + EF_SIZE));
 }
