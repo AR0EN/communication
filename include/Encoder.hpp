@@ -2,6 +2,9 @@
 #define __ENCODER_HPP__
 
 #include <cstdint>
+#ifdef DEBUG
+#include <cstdio>
+#endif  // DEBUG
 #include <cstring>
 #include <memory>
 #include <vector>
@@ -16,8 +19,23 @@ inline bool encode(
     const std::unique_ptr<uint8_t[]>& pData, const size_t& size,
     std::unique_ptr<uint8_t[]>& pEncodedData, size_t& encodedSize) {
 
-    if ((pData) && validate_payload_size(size)) {
-        encodedSize = sizeof(SF) + sizeof(size_t) + size + sizeof(EF);
+#ifdef DEBUG
+    if (nullptr == pData) {
+        printf("[%s][%d] Input buffer is empty!\n", __func__, __LINE__);
+        return false;
+    }
+
+    if (!validate_payload_size(size)) {
+        printf("[%s][%d] Input buffer size (%lu) is not acceptable!\n",
+            __func__, __LINE__, static_cast<uint64_t>(size)
+        );
+        return false;
+    }
+#else
+    if ((pData) && validate_payload_size(size))
+#endif  // DEBUG
+    {
+        encodedSize = SF_SIZE + SIZE_OF_PAYLOAD_SIZE + size + EF_SIZE;
         pEncodedData.reset(new uint8_t[encodedSize]);
 
         // Note: hard-coded to maximize performance!
@@ -65,8 +83,11 @@ class Decoder {
         resetBuffer();
     }
 
-    inline void feed(const std::unique_ptr<uint8_t[]>& pdata, const int& size) {
-        for (int i = 0; i < size; i++) {
+    inline void feed(const std::unique_ptr<uint8_t[]>& pdata, const size_t& size) {
+#ifdef DEBUG
+        printf("[%s][%d] Feed %lu bytes!\n", __func__, __LINE__, size);
+#endif  // DEBUG
+        for (size_t i = 0; i < size; i++) {
             proceed(pdata[i]);
         }
     }
@@ -87,25 +108,44 @@ class Decoder {
                     mState = E_SIZE;
                 } else {
                     // Discard
+#ifdef DEBUG
+                    printf("[%s][%d] Expected 0x%02X but received 0x%02X!\n",
+                        __func__, __LINE__, SF, b
+                    );
+#endif  // DEBUG
                 }
                 break;
 
             case E_SIZE:
             {
-                static int size_byte_pos = 0;
+                static size_t size_byte_pos = 0;
+#ifdef DEBUG
+                printf("[%s][%d] Size byte %lu -> shift %lu bits!\n",
+                    __func__, __LINE__,
+                    static_cast<uint64_t>(size_byte_pos), static_cast<uint64_t>(size_byte_pos << 3)
+                );
+#endif  // DEBUG
+                mPayloadSize |= (static_cast<size_t>(b) & 0x000000FF) << (size_byte_pos++ << 3);
 
-                mPayloadSize |= (static_cast<size_t>(b) & 0x000000FF) << (size_byte_pos << 3);
-                size_byte_pos++;
-
-                if (sizeof(mPayloadSize) <= (uint16_t)size_byte_pos) {
+                if (SIZE_OF_PAYLOAD_SIZE <= size_byte_pos) {
                     size_byte_pos = 0;
 
                     if (validate_payload_size(mPayloadSize)) {
                         mpPayload.reset(new uint8_t[mPayloadSize]);
                         mState = E_PAYLOAD;
+#ifdef DEBUG
+                        printf("[%s][%d] Payload size: %lu!\n",
+                            __func__, __LINE__, static_cast<uint64_t>(mPayloadSize)
+                        );
+#endif  // DEBUG
                     } else {
                         // Invalid payload size!
                         mState = E_SF;
+#ifdef DEBUG
+                        printf("[%s][%d] Invalid payload size: %lu!\n",
+                            __func__, __LINE__, static_cast<uint64_t>(mPayloadSize)
+                        );
+#endif  // DEBUG
                     }
                 }
             }
@@ -132,6 +172,18 @@ class Decoder {
                             mpPayload, mPayloadSize, timestampUs
                         )
                     );
+#ifdef DEBUG
+                    printf("[%s][%d] Decoded a packet with %lu bytes payload at %ld (us)!\n",
+                        __func__, __LINE__, mPayloadSize, timestampUs
+                    );
+#endif  // DEBUG
+                } else {
+                    // Discard
+#ifdef DEBUG
+                    printf("[%s][%d] Expected 0x%02X but received 0x%02X!\n",
+                        __func__, __LINE__, EF, b
+                    );
+#endif  // DEBUG
                 }
             }
                 // break;

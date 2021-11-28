@@ -4,9 +4,15 @@ project(comm-unit-tests)
 
 set(CMAKE_CXX_STANDARD 11)
 
-add_compile_options(-Wall)
+# add `-DDEFINE_DEBUG=ON` to enable debug log
+OPTION(DEFINE_DEBUG "Enable debug log" OFF) # Disabled by default
+IF (DEFINE_DEBUG)
+add_definitions(-DDEBUG)
+ENDIF (DEFINE_DEBUG)
 
-# UdpPeer
+add_compile_options(-g -Wall)
+
+# Unit test - Encoder
 add_executable(
     encoder_ut
 

@@ -36,7 +36,7 @@ class SyncQueue {
             mCv.wait_for(lock, std::chrono::milliseconds(mTimeoutMs));
         }
 
-        result = mQueue.empty();
+        result = !mQueue.empty();
 
         while (!mQueue.empty()) {
             items.push_back(std::move(mQueue.front()));
