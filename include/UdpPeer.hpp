@@ -15,7 +15,7 @@
 
 
 // #include <unistd.h>
-// #include <arpa/inet.h>
+#include <arpa/inet.h>
 
 #include "common.hpp"
 #include "Endpoint.hpp"
@@ -30,7 +30,7 @@ class UdpPeer : public EndPoint {
         stop();
     }
 
-    static std::unique_ptr<UdpPeer>& create(
+    static std::unique_ptr<UdpPeer> create(
         const uint16_t& localPort, const std::string& peerAddress, const uint16_t& peerPort
     ) {
         std::unique_ptr<UdpPeer> udpPeer;
@@ -41,7 +41,6 @@ class UdpPeer : public EndPoint {
         int socketFd = socket(AF_INET, SOCK_DGRAM, 0);
         if (0 > socketFd) {
             perror("Could not create UDP socket!\n");
-            mExitFlag = true;
             return udpPeer;
         }
 
@@ -128,14 +127,14 @@ class UdpPeer : public EndPoint {
         mpTxThread.reset(new std::thread(&comm::UdpPeer::runTx, this));
     }
 
-    ssize_t lread(const std::unique_ptr<uint8[]>& pBuffer, const size_t& limit) override {
+    ssize_t lread(const std::unique_ptr<uint8_t[]>& pBuffer, const size_t& limit) override {
         socklen_t remoteAddressSize;
         struct sockaddr_in remoteSocketAddr;
         remoteAddressSize = (socklen_t)sizeof(remoteSocketAddr);
 
         ssize_t ret = recvfrom(
                         mSocketFd, pBuffer.get(), limit, 0,
-                        static_cast<struct sockaddr *>(&remoteSocketAddr), &remoteAddressSize
+                        reinterpret_cast<struct sockaddr *>(&remoteSocketAddr), &remoteAddressSize
                     );
 
         if (0 > ret) {
@@ -145,26 +144,30 @@ class UdpPeer : public EndPoint {
                 fprintf(stderr, "[%s][%d] Error : %d\n", __func__, __LINE__, errno);
                 perror("");
             }
+        } else {
+#ifdef DEBUG
+            printf("[%s][%d] Received %ld bytes\n", __func__, __LINE__, ret);
+#endif  // DEBUG
         }
 
         return ret;
     }
 
-    ssize_t lwrite(const std::unique_ptr<const Packet>& pPacket) override {
+    ssize_t lwrite(const std::unique_ptr<uint8_t[]>& pData, const size_t& size) override {
         std::lock_guard<std::mutex> lock(mPeerMutex);
 
         // Destination address
         struct sockaddr_in peerAddr;
         peerAddr.sin_family      = AF_INET;
         peerAddr.sin_port        = htons(mPeerPort);
-        peerAddr.sin_addr.s_addr = inet_addr(mPeerAddress);
+        peerAddr.sin_addr.s_addr = inet_addr(mPeerAddress.c_str());
 
         // Send data over UDP
         ssize_t ret = 0LL;
-        for (int i; i < TX_RETRY_COUNT; i++) {
+        for (int i = 0; i < TX_RETRY_COUNT; i++) {
             ret = sendto(
-                            mSocketFd, pPacket->getPayload().get(), pPacket->getPayloadSize(), 0,
-                            static_cast<struct sockaddr *>(&peerAddr), sizeof(peerAddr)
+                            mSocketFd, pData.get(), size, 0,
+                            reinterpret_cast<struct sockaddr *>(&peerAddr), sizeof(peerAddr)
                         );
 
             if (0 > ret) {
@@ -176,6 +179,9 @@ class UdpPeer : public EndPoint {
                     // Ignore & retry
                 }
             } else {
+#ifdef DEBUG
+                printf("[%s][%d] Transmitted %ld bytes\n", __func__, __LINE__, ret);
+#endif  // DEBUG
                 break;
             }
         }
@@ -186,7 +192,8 @@ class UdpPeer : public EndPoint {
  private:
     void runRx() {
         while(!mExitFlag) {
-            if (0 > proceedRx()) {
+            if (!proceedRx()) {
+                fprintf(stderr, "[%s][%d]\n", __func__, __LINE__);
                 break;
             }
         }
@@ -194,7 +201,8 @@ class UdpPeer : public EndPoint {
 
     void runTx() {
         while(!mExitFlag) {
-            if (0 > proceedTx()) {
+            if (!proceedTx()) {
+                fprintf(stderr, "[%s][%d]\n", __func__, __LINE__);
                 break;
             }
         }

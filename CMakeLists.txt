@@ -21,3 +21,15 @@ add_executable(
 )
 
 target_include_directories(encoder_ut PRIVATE include test)
+
+# Unit test - UdpPeer
+add_executable(
+    udp_peer_ut
+
+    test/udp_peer_ut.cpp
+    test/test_vectors.cpp
+)
+
+target_link_libraries(udp_peer_ut pthread)
+
+target_include_directories(udp_peer_ut PRIVATE include test)
