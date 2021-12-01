@@ -3,10 +3,6 @@
 
 #include <cstdint>
 
-#ifdef DEBUG
-#include <cstdio>
-#endif  // DEBUG
-
 #include <cstring>
 #include <memory>
 #include <vector>
@@ -23,12 +19,12 @@ inline bool encode(
 
 #ifdef DEBUG
     if (nullptr == pData) {
-        printf("[%s][%d] Input buffer is empty!\n", __func__, __LINE__);
+        LOGD("[%s][%d] Input buffer is empty!\n", __func__, __LINE__);
         return false;
     }
 
     if (!validate_payload_size(size)) {
-        printf("[%s][%d] Input buffer size (%lu) is not acceptable!\n",
+        LOGD("[%s][%d] Input buffer size (%lu) is not acceptable!\n",
             __func__, __LINE__, static_cast<uint64_t>(size)
         );
         return false;
@@ -86,9 +82,7 @@ class Decoder {
     }
 
     inline void feed(const std::unique_ptr<uint8_t[]>& pdata, const size_t& size) {
-#ifdef DEBUG
-        printf("[%s][%d] Feed %lu bytes!\n", __func__, __LINE__, size);
-#endif  // DEBUG
+        LOGD("[%s][%d] Feed %lu bytes!\n", __func__, __LINE__, size);
         for (size_t i = 0; i < size; i++) {
             proceed(pdata[i]);
         }
@@ -110,23 +104,19 @@ class Decoder {
                     mState = E_SIZE;
                 } else {
                     // Discard
-#ifdef DEBUG
-                    printf("[%s][%d] Expected 0x%02X but received 0x%02X!\n",
+                    LOGE("[%s][%d] Expected 0x%02X but received 0x%02X!\n",
                         __func__, __LINE__, SF, b
                     );
-#endif  // DEBUG
                 }
                 break;
 
             case E_SIZE:
             {
                 static size_t size_byte_pos = 0;
-#ifdef DEBUG
-                printf("[%s][%d] Size byte %lu -> shift %lu bits!\n",
+                LOGD("[%s][%d] Size byte %lu -> shift %lu bits!\n",
                     __func__, __LINE__,
                     static_cast<uint64_t>(size_byte_pos), static_cast<uint64_t>(size_byte_pos << 3)
                 );
-#endif  // DEBUG
                 mPayloadSize |= (static_cast<size_t>(b) & 0x000000FF) << (size_byte_pos++ << 3);
 
                 if (SIZE_OF_PAYLOAD_SIZE <= size_byte_pos) {
@@ -135,19 +125,15 @@ class Decoder {
                     if (validate_payload_size(mPayloadSize)) {
                         mpPayload.reset(new uint8_t[mPayloadSize]);
                         mState = E_PAYLOAD;
-#ifdef DEBUG
-                        printf("[%s][%d] Payload size: %lu!\n",
+                        LOGD("[%s][%d] Payload size: %lu!\n",
                             __func__, __LINE__, static_cast<uint64_t>(mPayloadSize)
                         );
-#endif  // DEBUG
                     } else {
                         // Invalid payload size!
                         mState = E_SF;
-#ifdef DEBUG
-                        printf("[%s][%d] Invalid payload size: %lu!\n",
+                        LOGE("[%s][%d] Invalid payload size: %lu!\n",
                             __func__, __LINE__, static_cast<uint64_t>(mPayloadSize)
                         );
-#endif  // DEBUG
                     }
                 }
             }
@@ -172,18 +158,14 @@ class Decoder {
                     std::unique_ptr<Packet> pPacket = Packet::create(mpPayload, mPayloadSize, timestampUs);
                     mDecodedQueue.enqueue(pPacket);
                     // mDecodedQueue.enqueue(Packet::create(mpPayload, mPayloadSize, timestampUs));
-#ifdef DEBUG
-                    printf("[%s][%d] Decoded a packet with %lu bytes payload at %ld (us)!\n",
+                    LOGD("[%s][%d] Decoded a packet with %lu bytes payload at %ld (us)!\n",
                         __func__, __LINE__, mPayloadSize, timestampUs
                     );
-#endif  // DEBUG
                 } else {
                     // Discard
-#ifdef DEBUG
-                    printf("[%s][%d] Expected 0x%02X but received 0x%02X!\n",
+                    LOGE("[%s][%d] Expected 0x%02X but received 0x%02X!\n",
                         __func__, __LINE__, EF, b
                     );
-#endif  // DEBUG
                 }
             }
                 // break;

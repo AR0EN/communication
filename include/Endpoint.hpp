@@ -3,7 +3,6 @@
 
 #include <errno.h>
 #include <cstdint>
-#include <cstdio>
 #include <unistd.h>
 
 #include <memory>
@@ -24,7 +23,7 @@ class EndPoint {
             mTxQueue.enqueue(pPacket);
             return true;
         } else {
-            fprintf(stderr, "[%s][%d] Tx packet must not be empty!\n", __func__, __LINE__);
+            LOGE("[%s][%d] Tx packet must not be empty!\n", __func__, __LINE__);
             return false;
         }
     }
@@ -34,7 +33,7 @@ class EndPoint {
             mTxQueue.enqueue(pPacket);
             return true;
         } else {
-            fprintf(stderr, "[%s][%d] Tx packet must not be empty!\n", __func__, __LINE__);
+            LOGE("[%s][%d] Tx packet must not be empty!\n", __func__, __LINE__);
             return false;
         }
     }
@@ -44,12 +43,12 @@ class EndPoint {
     }
 
     virtual bool checkRxPipe() {
-        printf("[%s][%d]\n", __func__, __LINE__);
+        LOGE("[%s][%d]\n", __func__, __LINE__);
         return true;
     }
 
     virtual bool checkTxPipe() {
-        printf("[%s][%d]\n", __func__, __LINE__);
+        LOGE("[%s][%d]\n", __func__, __LINE__);
         return true;
     }
 
@@ -65,9 +64,7 @@ class EndPoint {
             std::lock_guard<std::mutex> lock(mRxMutex);
 
             if (!checkRxPipe()) {
-#ifdef DEBUG
-                fprintf(stderr, "[%s][%d] Rx pipe is closed!\n", __func__, __LINE__);
-#endif  // DEBUG
+                LOGD("[%s][%d] Rx pipe is closed!\n", __func__, __LINE__);
                 return true;
             }
 
@@ -75,7 +72,7 @@ class EndPoint {
         }
 
         if (0 > byteCount) {
-            fprintf(stderr, "[%s][%d] Could not read from lower layer!\n", __func__, __LINE__);
+            LOGE("[%s][%d] Could not read from lower layer!\n", __func__, __LINE__);
             return false;
         } else if (0 < byteCount) {
             mDecoder.feed(mpRxBuffer, byteCount);
@@ -91,14 +88,10 @@ class EndPoint {
             return true;
         }
 
-#ifdef DEBUG
-        printf("[%s][%d] %lu packets in Tx queue\n", __func__, __LINE__, pTxPackets.size());
-#endif  // DEBUG
+        LOGD("[%s][%d] %lu packets in Tx queue\n", __func__, __LINE__, pTxPackets.size());
 
         if (!checkTxPipe()) {
-#ifdef DEBUG
-            printf("[%s][%d] Tx pipe is closed!\n", __func__, __LINE__);
-#endif  // DEBUG
+            LOGD("[%s][%d] Tx pipe is closed!\n", __func__, __LINE__);
             return true;
         }
 
@@ -111,19 +104,17 @@ class EndPoint {
             );
 
             if ((!pEncodedData) || (0 == encodedSize)) {
-                fprintf(stderr, "[%s][%d] Could not encode data!\n", __func__, __LINE__);
+                LOGE("[%s][%d] Could not encode data!\n", __func__, __LINE__);
                 continue;
             }
 
             std::lock_guard<std::mutex> lock(mTxMutex);
             byteCount = lwrite(pEncodedData, encodedSize);
             if (0 > byteCount) {
-                fprintf(stderr, "[%s][%d] Could not write to lower layer!\n", __func__, __LINE__);
+                LOGE("[%s][%d] Could not write to lower layer!\n", __func__, __LINE__);
                 return false;
             } else {
-#ifdef DEBUG
-                printf("[%s][%d] Wrote %ld bytes\n", __func__, __LINE__, byteCount);
-#endif  // DEBUG
+                LOGD("[%s][%d] Wrote %ld bytes\n", __func__, __LINE__, byteCount);
             }
         }
 

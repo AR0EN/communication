@@ -1,4 +1,3 @@
-#include <cstdio>
 #include <cstring>
 #include <vector>
 
@@ -27,18 +26,18 @@ bool test(const std::vector<std::unique_ptr<comm::Packet>>& pRxPackets) {
     int i = 0;
     for (auto& pPacket : pRxPackets) {
         size_t packet_size = pPacket->getPayloadSize();
-        printf("Packet %d (%lu bytes)\n", i, static_cast<uint64_t>(packet_size));
+        LOGI("Packet %d (%lu bytes)\n", i, static_cast<uint64_t>(packet_size));
         if (vectors_sizes[i] == packet_size) {
             std::unique_ptr<uint8_t[]> pTestData (new uint8_t[vectors_sizes[i]]);
             memcpy(pTestData.get(), vectors[i], vectors_sizes[i]);
             if (compare(pTestData, pPacket->getPayload(), vectors_sizes[i])) {
-                printf("  -> Matched!\n");
+                LOGI("  -> Matched!\n");
             } else {
-                printf("  -> Data is not matched!\n");
+                LOGI("  -> Data is not matched!\n");
                 return false;
             }
         } else {
-            printf("  -> Packet length is not matched (expected: %lu bytes)!\n", vectors_sizes[i]);
+            LOGI("  -> Packet length is not matched (expected: %lu bytes)!\n", vectors_sizes[i]);
             return false;
         }
 
@@ -50,7 +49,7 @@ bool test(const std::vector<std::unique_ptr<comm::Packet>>& pRxPackets) {
 
 int main(int argc, char ** argv) {
     if (4 > argc) {
-        printf("Usage: %s <Local Port> <Peer Address> <Peer Port>\n", argv[0]);
+        LOGI("Usage: %s <Local Port> <Peer Address> <Peer Port>\n", argv[0]);
         return 1;
     }
 
@@ -59,10 +58,10 @@ int main(int argc, char ** argv) {
     );
 
     if (!pUdpPeer) {
-        printf("Could not create UdpPeer (%s/%s)!\n", argv[1], argv[2]);
+        LOGI("Could not create UdpPeer (%s/%s)!\n", argv[1], argv[2]);
     }
 
-    printf("Press any key to continue ...\n");
+    LOGI("Press any key to continue ...\n");
     getchar();
 
     for (size_t i = 0; i < vectors.size(); i++) {
@@ -71,21 +70,21 @@ int main(int argc, char ** argv) {
         pUdpPeer->send(comm::Packet::create(pdata, vectors_sizes[i]));
     }
 
-    printf("Press any key to check Rx queue ...\n");
+    LOGI("Press any key to check Rx queue ...\n");
     getchar();
 
     std::vector<std::unique_ptr<comm::Packet>> pPackets;
     if (pUdpPeer->consumeRx(pPackets)) {
         if (test(pPackets)) {
-            printf("-> Passed!\n");
+            LOGI("-> Passed!\n");
         } else {
-            printf("-> Failed!\n");
+            LOGI("-> Failed!\n");
         }
     } else {
-        printf("Rx queue is empty!\n");
+        LOGI("Rx queue is empty!\n");
     }
 
-    printf("Press any key to exit ...\n");
+    LOGI("Press any key to exit ...\n");
     getchar();
 
     return 0;

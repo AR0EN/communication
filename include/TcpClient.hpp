@@ -61,13 +61,13 @@ public:
             return;
         }
 
-        printf("Connection has been established with %s/%d\n", serverAddr, mRemotePort);
+        LOGI("Connection has been established with %s/%d\n", serverAddr, mRemotePort);
 
         mExitFlag = false;
     }
 
     ~TcpClient() {
-        printf("TcpClient is finalizing ...!\n");
+        LOGI("TcpClient is finalizing ...!\n");
         stop();
     }
 
@@ -84,7 +84,7 @@ public:
             mSocketFd = -1;
         }
 
-        printf("TcpClient has been finalized!\n");
+        LOGI("TcpClient has been finalized!\n");
     }
 
     size_t send(IMessage& message);

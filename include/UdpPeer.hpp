@@ -1,21 +1,14 @@
 #ifndef __UDPPEER_HPP__
 #define __UDPPEER_HPP__
 
-#include <cstdio>
+#include <arpa/inet.h>
 #include <cstdint>
 #include <sys/socket.h>
 #include <sys/time.h>
 #include <sys/types.h>
 
-
-// #include <atomic>
 #include <memory>
 #include <thread>
-// #include <vector>
-
-
-// #include <unistd.h>
-#include <arpa/inet.h>
 
 #include "common.hpp"
 #include "Endpoint.hpp"
@@ -26,8 +19,8 @@ namespace comm {
 class UdpPeer : public EndPoint {
  public:
     virtual ~UdpPeer() {
-        printf("UDP Peer is finalizing ...\n");
         stop();
+        LOGI("[%s][%d] Finalized!\n", __func__, __LINE__);
     }
 
     static std::unique_ptr<UdpPeer> create(
@@ -72,7 +65,7 @@ class UdpPeer : public EndPoint {
             return nullptr;
         }
 
-        printf("[%s][%d] Bound at port %u\n", __func__, __LINE__, localPort);
+        LOGI("[%s][%d] Bound at port %u\n", __func__, __LINE__, localPort);
         return std::unique_ptr<UdpPeer>(new UdpPeer(socketFd, localPort, peerAddress, peerPort));
     }
 
@@ -88,13 +81,11 @@ class UdpPeer : public EndPoint {
             close(mSocketFd);
             mSocketFd = -1;
         }
-
-        printf("Finalized!\n");
     }
 
     bool setDestination(const std::string& address, const uint16_t& port) {
         if (address.empty() || (0 == port)) {
-            fprintf(stderr, "[%s][%d] Invalid peer information!\n", __func__, __LINE__);
+            LOGE("[%s][%d] Invalid peer information!\n", __func__, __LINE__);
             return false;
         }
 
@@ -141,13 +132,11 @@ class UdpPeer : public EndPoint {
             if (EWOULDBLOCK == errno) {
                 ret = 0;
             } else {
-                fprintf(stderr, "[%s][%d] Error : %d\n", __func__, __LINE__, errno);
+                LOGE("[%s][%d] Error : %d\n", __func__, __LINE__, errno);
                 perror("");
             }
         } else {
-#ifdef DEBUG
-            printf("[%s][%d] Received %ld bytes\n", __func__, __LINE__, ret);
-#endif  // DEBUG
+            LOGD("[%s][%d] Received %ld bytes\n", __func__, __LINE__, ret);
         }
 
         return ret;
@@ -172,16 +161,14 @@ class UdpPeer : public EndPoint {
 
             if (0 > ret) {
                 if (EWOULDBLOCK != errno) {
-                    fprintf(stderr, "[%s][%d] Error : %d\n", __func__, __LINE__, errno);
+                    LOGE("[%s][%d] Error : %d\n", __func__, __LINE__, errno);
                     perror("");
                     break;
                 } else {
                     // Ignore & retry
                 }
             } else {
-#ifdef DEBUG
-                printf("[%s][%d] Transmitted %ld bytes\n", __func__, __LINE__, ret);
-#endif  // DEBUG
+                LOGD("[%s][%d] Transmitted %ld bytes\n", __func__, __LINE__, ret);
                 break;
             }
         }
@@ -193,7 +180,7 @@ class UdpPeer : public EndPoint {
     void runRx() {
         while(!mExitFlag) {
             if (!proceedRx()) {
-                fprintf(stderr, "[%s][%d]\n", __func__, __LINE__);
+                LOGE("[%s][%d]\n", __func__, __LINE__);
                 break;
             }
         }
@@ -202,7 +189,7 @@ class UdpPeer : public EndPoint {
     void runTx() {
         while(!mExitFlag) {
             if (!proceedTx()) {
-                fprintf(stderr, "[%s][%d]\n", __func__, __LINE__);
+                LOGE("[%s][%d]\n", __func__, __LINE__);
                 break;
             }
         }

@@ -1,8 +1,19 @@
 #ifndef _COMMON_HPP_
 #define _COMMON_HPP_
 
-#include <chrono>
+#include <cstdio>
 #include <cstdint>
+
+#include <chrono>
+
+#define LOGI(...)   printf(__VA_ARGS__)
+#define LOGE(...)   fprintf(stderr, __VA_ARGS__)
+
+#ifdef DEBUG
+#define LOGD(...)   printf(__VA_ARGS__)
+#else
+#define LOGD(...)
+#endif
 
 namespace comm{
 

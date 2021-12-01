@@ -1,4 +1,3 @@
-#include <cstdio>
 #include <cstring>
 #include <vector>
 
@@ -32,7 +31,7 @@ bool test(const std::unique_ptr<uint8_t[]>& pdata, const size_t& size, const siz
     size_t encoded_size;
 
     result = comm::encode(pdata, size, pencoded_data, encoded_size);
-    printf("  * Step 1: encoded %lu bytes to %lu bytes\n",
+    LOGI("  * Step 1: encoded %lu bytes to %lu bytes\n",
         static_cast<uint64_t>(size), static_cast<uint64_t>(encoded_size)
     );
 
@@ -41,7 +40,7 @@ bool test(const std::unique_ptr<uint8_t[]>& pdata, const size_t& size, const siz
     }
 
     // Decoding
-    printf("  * Step 2:\n");
+    LOGI("  * Step 2:\n");
     const uint8_t * internal_pointer = pencoded_data.get();
     std::unique_ptr<uint8_t[]> ptmp;
     size_t chunk_size;
@@ -49,11 +48,9 @@ bool test(const std::unique_ptr<uint8_t[]>& pdata, const size_t& size, const siz
     while (0 < encoded_size) {
         chunk_size = (max_chunk_size < encoded_size)? max_chunk_size:encoded_size;
         encoded_size -= chunk_size;
-#ifdef DEBUG
-        printf("Feed %lu bytes -> %lu bytes left!\n",
+        LOGD("Feed %lu bytes -> %lu bytes left!\n",
             static_cast<uint64_t>(chunk_size), static_cast<uint64_t>(encoded_size)
         );
-#endif  // DEBUG
         ptmp.reset(new uint8_t[chunk_size]);
         memcpy(ptmp.get(), internal_pointer, chunk_size);
         decoder.feed(ptmp, chunk_size);
@@ -68,13 +65,13 @@ bool test(const std::unique_ptr<uint8_t[]>& pdata, const size_t& size, const siz
             if (result) {
                 result &= compare(ppacket->getPayload(), pdata, size);
             }
-            printf("  -> Decoded %lu bytes\n",
+            LOGI("  -> Decoded %lu bytes\n",
                 static_cast<uint64_t>(ppacket->getPayloadSize())
             );
         }
     } else {
         result = false;
-        printf("  -> No packet has been decoded!\n");
+        LOGI("  -> No packet has been decoded!\n");
     }
 
     return result;
@@ -84,8 +81,8 @@ int main() {
     for (size_t i = 0; i < vectors.size(); i++) {
         std::unique_ptr<uint8_t[]> pdata(new uint8_t[vectors_sizes[i]]);
         memcpy(pdata.get(), vectors[i], vectors_sizes[i]);
-        printf("Test case %02lu:\n", static_cast<uint64_t>(i));
-        printf("-> %s\n\n", test(pdata, vectors_sizes[i]) ? "Passed" : "Failed");
+        LOGI("Test case %02lu:\n", static_cast<uint64_t>(i));
+        LOGI("-> %s\n\n", test(pdata, vectors_sizes[i]) ? "Passed" : "Failed");
     }
 
     return 0;
