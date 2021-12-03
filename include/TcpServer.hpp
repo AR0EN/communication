@@ -1,146 +1,227 @@
-#ifndef _TCP_SERVER_HPP_
-#define _TCP_SERVER_HPP_
+#ifndef __TCPSERVER_HPP__
+#define __TCPSERVER_HPP__
 
-#include "common.hpp"
-#include "Encoder.hpp"
-#include "Message.hpp"
+#include <arpa/inet.h>
+#include <cstdint>
+#include <sys/socket.h>
+#include <sys/time.h>
+#include <unistd.h>
 
 #include <atomic>
 #include <memory>
+#include <mutex>
 #include <thread>
-#include <vector>
 
-#include <stdio.h>
-#include <stdint.h>
-#include <unistd.h>
-#include <arpa/inet.h>
-#include <sys/socket.h>
-#include <sys/time.h>
+#include "common.hpp"
+#include "Endpoint.hpp"
+#include "Packet.hpp"
 
 namespace comm {
 
-class TcpServer : public DecodingObserver, public std::enable_shared_from_this<TcpServer> {
-public:
-    TcpServer(uint16_t rxPort) {
-        mRemoteSocketFd = -1;
+class TcpServer : public EndPoint {
+ public:
+    ~TcpServer() {
+        stop();
+        LOGI("[%s][%d] Finalized!\n", __func__, __LINE__);
+    }
 
-        mSocketFd = socket(AF_INET, SOCK_STREAM, 0);
-        if (0 > mSocketFd) {
-            perror("Could not create TCP socket!\n");
-            mExitFlag = true;
-            return;
+    static std::unique_ptr<TcpServer> create(uint16_t localPort) {
+        std::unique_ptr<TcpServer> tcpServer;
+
+        if (0 == localPort) {
+            LOGE("[%s][%d] Local Port must be a positive value!\n", __func__, __LINE__);
+            return tcpServer;
         }
 
-        int ret;
+        int localSocketFd = socket(AF_INET, SOCK_STREAM, 0);
+        if (0 > localSocketFd) {
+            perror("Could not create TCP socket!\n");
+            return tcpServer;
+        }
 
         int enable = 1;
-        ret = setsockopt(mSocketFd, SOL_SOCKET, SO_REUSEADDR, &enable, sizeof(int));
+        int ret = setsockopt(localSocketFd, SOL_SOCKET, SO_REUSEADDR, &enable, sizeof(int));
         if (0 > ret) {
-            perror("setsockopt(SO_REUSEADDR) -> false!\n");
-            mExitFlag = true;
-            return;
+            perror("Failed to enable SO_REUSEADDR!\n");
+            close(localSocketFd);
+            return tcpServer;
         }
 
         struct timeval timeout;
         timeout.tv_sec = RX_TIMEOUT_S;
         timeout.tv_usec = 0;
-        ret = setsockopt (mSocketFd, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout));
+        ret = setsockopt (localSocketFd, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout));
         if (0 > ret) {
-            perror("setsockopt(SO_RCVTIMEO) -> failed!\n");
-            mExitFlag = true;
-            return;
+            perror("Failed to configure SO_RCVTIMEO!\n");
+            close(localSocketFd);
+            return tcpServer;
         }
-
-        mRxPort = rxPort;
 
         struct sockaddr_in localSocketAddr;
         localSocketAddr.sin_family      = AF_INET;
         localSocketAddr.sin_addr.s_addr = INADDR_ANY;
-        localSocketAddr.sin_port = htons(mRxPort);
-        ret = bind(mSocketFd, (struct sockaddr *)&localSocketAddr, sizeof(localSocketAddr));
+        localSocketAddr.sin_port = htons(localPort);
+        ret = bind(localSocketFd, (struct sockaddr *)&localSocketAddr, sizeof(localSocketAddr));
         if (0 > ret) {
-            perror("bind() -> failed!\n");
-            return;
+            perror("Failed to assigns address to the socket!\n");
+            close(localSocketFd);
+            return tcpServer;
         }
 
-        printf("Bound at port %d\n", mRxPort);
-
-        ret = listen(mSocketFd, 3);
+        ret = listen(localSocketFd, BACKLOG);
         if (0 != ret) {
-            perror("listen() -> failed!\n");
-            return;
+            perror("Failed to mark the socket as a passive socket!\n");
+            close(localSocketFd);
+            return tcpServer;
         }
 
-        mExitFlag = false;
-    }
+        LOGI("[%s][%d] Tcp Server is listenning at port %u ...\n", __func__, __LINE__, localPort);
 
-    ~TcpServer() {
-        printf("TcpServer is finalizing ...!\n");
-        stop();
+        return std::unique_ptr<TcpServer>(new TcpServer(localSocketFd));
     }
 
     void stop() {
         mExitFlag = true;
 
-        if ((pThread) && (pThread->joinable())) {
-            pThread->join();
-            pThread.reset();
+        if ((mpRxThread) && (mpRxThread->joinable())) {
+            mpRxThread->join();
+            mpRxThread.reset();
         }
 
-        if (0 <= mRemoteSocketFd) {
-            close(mRemoteSocketFd);
-            mRemoteSocketFd = -1;
+        if ((mpTxThread) && (mpTxThread->joinable())) {
+            mpTxThread->join();
+            mpTxThread.reset();
         }
 
-        if (0 <= mSocketFd) {
-            close(mSocketFd);
-            mSocketFd = -1;
-        }
-
-        printf("TcpServer has been finalized!\n");
-    }
-
-    size_t send(IMessage& message);
-
-    bool start();
-    bool subscribe(const std::shared_ptr<IObserver>& pObserver);
-    // void unsubscribe() = 0;
-
-    // DecodingObserver implementation
-    void onComplete(const std::unique_ptr<uint8_t[]>& pData, const size_t& size) {
-        if (pData) {
-            std::unique_ptr<Message> pMessage(new Message());
-            pMessage->deserialize(pData, size);
-
-            notify(pMessage);
+        if (0 <= mLocalSocketFd) {
+            close(mLocalSocketFd);
+            mLocalSocketFd = -1;
         }
     }
 
-private:
-    void notify (const std::unique_ptr<Message>& pMessage) {
-        for (auto pObserver : mObservers) {
-            pObserver->onRecv(pMessage);
+    bool checkRxPipe() override {
+        std::lock_guard<std::mutex> lock(mRemoteSocketMutex);
+        return (0 <= mRemoteSocketFd);
+    }
+
+    bool checkTxPipe() override {
+        std::lock_guard<std::mutex> lock(mRemoteSocketMutex);
+        return (0 <= mRemoteSocketFd);
+    }
+
+ protected:
+    TcpServer(int localSocketFd) {
+        mLocalSocketFd = localSocketFd;
+        mRemoteSocketFd = -1;
+
+        mExitFlag = false;
+        mpRxThread.reset(new std::thread(&comm::TcpServer::runRx, this));
+        mpTxThread.reset(new std::thread(&comm::TcpServer::runTx, this));
+    }
+
+
+    ssize_t lread(const std::unique_ptr<uint8_t[]>& pBuffer, const size_t& limit) override {
+        ssize_t ret = read(mRemoteSocketFd, pBuffer.get(), limit);
+
+        if (0 > ret) {
+            if (EWOULDBLOCK == errno) {
+                ret = 0;
+            } else {
+                std::lock_guard<std::mutex> lock(mRemoteSocketMutex);
+                mRemoteSocketFd = -1;
+                perror("");
+            }
+        } else {
+            LOGD("[%s][%d] Received %ld bytes\n", __func__, __LINE__, ret);
+        }
+
+        return ret;
+    }
+
+    ssize_t lwrite(const std::unique_ptr<uint8_t[]>& pData, const size_t& size) override {
+        // Send data over TCP
+        ssize_t ret = 0LL;
+        for (int i = 0; i < TX_RETRY_COUNT; i++) {
+            ret = write(mRemoteSocketFd, pData.get(), size);
+
+            if (0 > ret) {
+                if (EWOULDBLOCK != errno) {
+                    std::lock_guard<std::mutex> lock(mRemoteSocketMutex);
+                    mRemoteSocketFd = -1;
+                    perror("");
+                    break;
+                } else {
+                    // Ignore & retry
+                }
+            } else {
+                LOGD("[%s][%d] Transmitted %ld bytes\n", __func__, __LINE__, ret);
+                break;
+            }
+        }
+
+        return ret;
+    }
+
+ private:
+    void runRx() {
+        struct sockaddr_in remoteSocketAddr;
+        socklen_t remoteAddressSize = static_cast<socklen_t>(sizeof(remoteSocketAddr));
+
+        while(!mExitFlag) {
+            {
+                std::lock_guard<std::mutex> lock(mRemoteSocketMutex);
+                mRemoteSocketFd = accept(
+                                        mLocalSocketFd,
+                                        reinterpret_cast<struct sockaddr*>(&remoteSocketAddr),
+                                        &remoteAddressSize
+                                    );
+
+                if (0 > mRemoteSocketFd) {
+                    if (EAGAIN == errno) {
+                        // Timeout - do nothing
+                        continue;
+                    } else {
+                        perror("Could not access connection queue!\n");
+                        break;
+                    }
+                }
+            }
+
+            while(!mExitFlag) {
+                if (!proceedRx()) {
+                    LOGE("[%s][%d]\n", __func__, __LINE__);
+                    break;
+                }
+            }
+
+            {
+                std::lock_guard<std::mutex> lock(mRemoteSocketMutex);
+                close(mRemoteSocketFd);
+                mRemoteSocketFd = -1;
+            }
         }
     }
 
-    void run();
-    void receive();
+    void runTx() {
+        while(!mExitFlag) {
+            if (!proceedTx()) {
+                LOGE("[%s][%d]\n", __func__, __LINE__);
+                break;
+            }
+        }
+    }
 
-    int mSocketFd;
-    std::atomic<int> mRemoteSocketFd;
-    uint16_t mRxPort;
+    int mLocalSocketFd;
+    int mRemoteSocketFd;
+    std::mutex mRemoteSocketMutex;
 
-    uint8_t mRxBuffer[MAX_PAYLOAD_SIZE << 1];
-
-    std::unique_ptr<Decoder> pDecoder;
-    std::vector<std::shared_ptr<IObserver>> mObservers;
-
-    std::unique_ptr<std::thread> pThread;
+    std::unique_ptr<std::thread> mpRxThread;
+    std::unique_ptr<std::thread> mpTxThread;
     std::atomic<bool> mExitFlag;
 
-    static constexpr int RX_TIMEOUT_S = 1;
-}; // class Peer
+    static constexpr int BACKLOG = 1;
+};  // class TcpServer
 
-}; // namespace comm
+}   // namespace comm
 
-#endif // _TCP_SERVER_HPP_
+#endif // __TCPSERVER_HPP__

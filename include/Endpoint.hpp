@@ -14,6 +14,9 @@
 
 namespace comm {
 
+static constexpr time_t RX_TIMEOUT_S = 1LL;
+static constexpr int TX_RETRY_COUNT = 3;
+
 class EndPoint {
  public:
     virtual ~EndPoint() {}

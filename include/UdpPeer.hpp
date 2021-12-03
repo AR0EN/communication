@@ -27,7 +27,9 @@ class UdpPeer : public EndPoint {
         const uint16_t& localPort, const std::string& peerAddress, const uint16_t& peerPort
     ) {
         std::unique_ptr<UdpPeer> udpPeer;
+
         if (0 == localPort) {
+            LOGE("[%s][%d] Peer 's Port must be a positive value!\n", __func__, __LINE__);
             return udpPeer;
         }
 
@@ -49,7 +51,7 @@ class UdpPeer : public EndPoint {
         timeout.tv_usec = 0;
 
         if (0 > setsockopt (socketFd, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout))) {
-            perror("Failed to set SO_RCVTIMEO!\n");
+            perror("Failed to configure SO_RCVTIMEO!\n");
             close(socketFd);
             return udpPeer;
         }
@@ -57,7 +59,7 @@ class UdpPeer : public EndPoint {
         struct sockaddr_in localSocketAddr;
         localSocketAddr.sin_family      = AF_INET;
         localSocketAddr.sin_addr.s_addr = INADDR_ANY;
-        localSocketAddr.sin_port = htons(localPort);
+        localSocketAddr.sin_port        = htons(localPort);
         int ret = bind(socketFd, (struct sockaddr *)&localSocketAddr, sizeof(localSocketAddr));
         if (0 > ret) {
             perror("Failed to bind socket!\n");
@@ -75,6 +77,11 @@ class UdpPeer : public EndPoint {
         if ((mpRxThread) && (mpRxThread->joinable())) {
             mpRxThread->join();
             mpRxThread.reset();
+        }
+
+        if ((mpTxThread) && (mpTxThread->joinable())) {
+            mpTxThread->join();
+            mpTxThread.reset();
         }
 
         if (0 <= mSocketFd) {
@@ -132,7 +139,6 @@ class UdpPeer : public EndPoint {
             if (EWOULDBLOCK == errno) {
                 ret = 0;
             } else {
-                LOGE("[%s][%d] Error : %d\n", __func__, __LINE__, errno);
                 perror("");
             }
         } else {
@@ -161,7 +167,6 @@ class UdpPeer : public EndPoint {
 
             if (0 > ret) {
                 if (EWOULDBLOCK != errno) {
-                    LOGE("[%s][%d] Error : %d\n", __func__, __LINE__, errno);
                     perror("");
                     break;
                 } else {
@@ -207,9 +212,6 @@ class UdpPeer : public EndPoint {
     std::unique_ptr<std::thread> mpRxThread;
     std::unique_ptr<std::thread> mpTxThread;
     std::atomic<bool> mExitFlag;
-
-    static constexpr time_t RX_TIMEOUT_S = 1LL;
-    static constexpr int TX_RETRY_COUNT = 3;
 };  // class Peer
 
 }   // namespace comm

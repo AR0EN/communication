@@ -12,24 +12,41 @@ ENDIF (DEFINE_DEBUG)
 
 add_compile_options(-g -Wall)
 
-# Unit test - Encoder
-add_executable(
-    encoder_ut
+include_directories(include test)
 
-    test/encoder_ut.cpp
+# Test vector
+add_library(
+    test_vectors STATIC
     test/test_vectors.cpp
 )
 
-target_include_directories(encoder_ut PRIVATE include test)
+# Unit test - Encoder
+add_executable(
+    ut_encoder
+    test/ut_encoder.cpp
+)
+
+target_link_libraries(ut_encoder test_vectors pthread)
 
 # Unit test - UdpPeer
 add_executable(
-    udp_peer_ut
-
-    test/udp_peer_ut.cpp
-    test/test_vectors.cpp
+    ut_udp_peer
+    test/ut_udp_peer.cpp
 )
 
-target_link_libraries(udp_peer_ut pthread)
+target_link_libraries(ut_udp_peer test_vectors pthread)
 
-target_include_directories(udp_peer_ut PRIVATE include test)
+# Unit test - Tcp Client & Server
+add_executable(
+    ut_tcp_client
+    test/ut_tcp_client.cpp
+)
+
+target_link_libraries(ut_tcp_client test_vectors pthread)
+
+add_executable(
+    ut_tcp_server
+    test/ut_tcp_server.cpp
+)
+
+target_link_libraries(ut_tcp_server test_vectors pthread)
