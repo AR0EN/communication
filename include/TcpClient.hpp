@@ -20,10 +20,10 @@ namespace comm {
 
 class TcpClient : public EndPoint {
  public:
-    void stop();
-
     bool checkRxPipe() override;
     bool checkTxPipe() override;
+
+    void stop();
 
     virtual ~TcpClient();
     static std::unique_ptr<TcpClient> create(const std::string& serverAddr, const uint16_t& remotePort);
@@ -40,7 +40,6 @@ class TcpClient : public EndPoint {
 
     std::string mServerAddress;
     uint16_t mRemotePort;
-
     std::atomic<int> mSocketFd;
 
     std::unique_ptr<std::thread> mpRxThread;
@@ -50,6 +49,6 @@ class TcpClient : public EndPoint {
 
 }   // namespace comm
 
-#include "TcpClient.inl"
+#include "inline/TcpClient.inl"
 
 #endif // __TCPCLIENT_HPP__

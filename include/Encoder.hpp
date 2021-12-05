@@ -28,18 +28,13 @@ enum DECODING_STATES {
 class Decoder {
  public:
     Decoder(): mState(E_SF) {}
-
-    virtual ~Decoder() {
-        resetBuffer();
-    }
+    virtual ~Decoder() { resetBuffer(); }
 
     void feed(const std::unique_ptr<uint8_t[]>& pdata, const size_t& size);
-
     bool dequeue(std::vector<std::unique_ptr<Packet>>& pPackets);
 
  private:
     void proceed(const uint8_t& b);
-
     void resetBuffer();
 
     DECODING_STATES mState;
@@ -52,6 +47,6 @@ class Decoder {
 
 }   // namespace comm
 
-#include "Encoder.inl"
+#include "inline/Encoder.inl"
 
 #endif // __ENCODER_HPP__

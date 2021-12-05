@@ -2,42 +2,7 @@
 
 namespace comm {
 
-inline bool EndPoint::send(std::unique_ptr<Packet>& pPacket) {
-    if (pPacket) {
-        mTxQueue.enqueue(pPacket);
-        return true;
-    } else {
-        LOGE("[%s][%d] Tx packet must not be empty!\n", __func__, __LINE__);
-        return false;
-    }
-}
-
-inline bool EndPoint::send(std::unique_ptr<Packet>&& pPacket) {
-    if (pPacket) {
-        mTxQueue.enqueue(pPacket);
-        return true;
-    } else {
-        LOGE("[%s][%d] Tx packet must not be empty!\n", __func__, __LINE__);
-        return false;
-    }
-}
-
-bool EndPoint::consumeRx(std::vector<std::unique_ptr<Packet>>& pRxPackets) {
-    return mDecoder.dequeue(pRxPackets);
-}
-
-inline bool EndPoint::checkRxPipe() {
-    LOGE("[%s][%d]\n", __func__, __LINE__);
-    return true;
-}
-
-inline bool EndPoint::checkTxPipe() {
-    LOGE("[%s][%d]\n", __func__, __LINE__);
-    return true;
-}
-
-
-inline bool EndPoint::proceedRx() {
+bool EndPoint::proceedRx() {
     ssize_t byteCount = 0;
 
     {
@@ -61,7 +26,7 @@ inline bool EndPoint::proceedRx() {
     return true;
 }
 
-inline bool EndPoint::proceedTx() {
+bool EndPoint::proceedTx() {
     std::vector<std::unique_ptr<Packet>> pTxPackets;
     if (!mTxQueue.dequeue(pTxPackets) || (0 >= pTxPackets.size())) {
         // Tx queue is empty!

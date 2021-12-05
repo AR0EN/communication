@@ -2,21 +2,7 @@
 
 namespace comm {
 
-inline TcpServer::TcpServer(int localSocketFd) {
-    mLocalSocketFd = localSocketFd;
-    mRemoteSocketFd = -1;
-
-    mExitFlag = false;
-    mpRxThread.reset(new std::thread(&TcpServer::runRx, this));
-    mpTxThread.reset(new std::thread(&TcpServer::runTx, this));
-}
-
-inline TcpServer::~TcpServer() {
-    stop();
-    LOGI("[%s][%d] Finalized!\n", __func__, __LINE__);
-}
-
-inline std::unique_ptr<TcpServer> TcpServer::create(uint16_t localPort) {
+std::unique_ptr<TcpServer> TcpServer::create(uint16_t localPort) {
     std::unique_ptr<TcpServer> tcpServer;
 
     if (0 == localPort) {
@@ -71,7 +57,7 @@ inline std::unique_ptr<TcpServer> TcpServer::create(uint16_t localPort) {
     return std::unique_ptr<TcpServer>(new TcpServer(localSocketFd));
 }
 
-inline void TcpServer::stop() {
+void TcpServer::stop() {
     mExitFlag = true;
 
     if ((mpRxThread) && (mpRxThread->joinable())) {
@@ -90,17 +76,7 @@ inline void TcpServer::stop() {
     }
 }
 
-inline bool TcpServer::checkRxPipe() {
-    std::lock_guard<std::mutex> lock(mRemoteSocketMutex);
-    return (0 <= mRemoteSocketFd);
-}
-
-inline bool TcpServer::checkTxPipe() {
-    std::lock_guard<std::mutex> lock(mRemoteSocketMutex);
-    return (0 <= mRemoteSocketFd);
-}
-
-inline ssize_t TcpServer::lread(const std::unique_ptr<uint8_t[]>& pBuffer, const size_t& limit) {
+ssize_t TcpServer::lread(const std::unique_ptr<uint8_t[]>& pBuffer, const size_t& limit) {
     ssize_t ret = read(mRemoteSocketFd, pBuffer.get(), limit);
 
     if (0 > ret) {
@@ -118,7 +94,7 @@ inline ssize_t TcpServer::lread(const std::unique_ptr<uint8_t[]>& pBuffer, const
     return ret;
 }
 
-inline ssize_t TcpServer::lwrite(const std::unique_ptr<uint8_t[]>& pData, const size_t& size) {
+ssize_t TcpServer::lwrite(const std::unique_ptr<uint8_t[]>& pData, const size_t& size) {
     // Send data over TCP
     ssize_t ret = 0LL;
     for (int i = 0; i < TX_RETRY_COUNT; i++) {
@@ -142,7 +118,7 @@ inline ssize_t TcpServer::lwrite(const std::unique_ptr<uint8_t[]>& pData, const 
     return ret;
 }
 
-inline void TcpServer::runRx() {
+void TcpServer::runRx() {
     struct sockaddr_in remoteSocketAddr;
     socklen_t remoteAddressSize = static_cast<socklen_t>(sizeof(remoteSocketAddr));
 
@@ -181,7 +157,7 @@ inline void TcpServer::runRx() {
     }
 }
 
-inline void TcpServer::runTx() {
+void TcpServer::runTx() {
     while(!mExitFlag) {
         if (!proceedTx()) {
             LOGE("[%s][%d]\n", __func__, __LINE__);

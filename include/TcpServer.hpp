@@ -20,10 +20,10 @@ namespace comm {
 
 class TcpServer : public EndPoint {
  public:
-    void stop();
-
     bool checkRxPipe() override ;
     bool checkTxPipe() override ;
+
+    void stop();
 
     ~TcpServer();
     static std::unique_ptr<TcpServer> create(uint16_t localPort);
@@ -51,6 +51,6 @@ class TcpServer : public EndPoint {
 
 }   // namespace comm
 
-#include "TcpServer.inl"
+#include "inline/TcpServer.inl"
 
 #endif // __TCPSERVER_HPP__

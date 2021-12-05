@@ -2,25 +2,7 @@
 
 namespace comm {
 
-inline UdpPeer::UdpPeer(
-        const int& socketFd, const uint16_t& localPort,
-        const std::string& peerAddress, const uint16_t& peerPort
-) {
-    mSocketFd = socketFd;
-    mLocalPort = localPort;
-    mPeerAddress = peerAddress;
-    mPeerPort = peerPort;
-    mExitFlag = false;
-    mpRxThread.reset(new std::thread(&UdpPeer::runRx, this));
-    mpTxThread.reset(new std::thread(&UdpPeer::runTx, this));
-}
-
-inline UdpPeer::~UdpPeer() {
-    stop();
-    LOGI("[%s][%d] Finalized!\n", __func__, __LINE__);
-}
-
-inline std::unique_ptr<UdpPeer> UdpPeer::create(
+std::unique_ptr<UdpPeer> UdpPeer::create(
     const uint16_t& localPort, const std::string& peerAddress, const uint16_t& peerPort
 ) {
     std::unique_ptr<UdpPeer> udpPeer;
@@ -68,7 +50,7 @@ inline std::unique_ptr<UdpPeer> UdpPeer::create(
     return std::unique_ptr<UdpPeer>(new UdpPeer(socketFd, localPort, peerAddress, peerPort));
 }
 
-inline void UdpPeer::stop() {
+void UdpPeer::stop() {
     mExitFlag = true;
 
     if ((mpRxThread) && (mpRxThread->joinable())) {
@@ -87,7 +69,7 @@ inline void UdpPeer::stop() {
     }
 }
 
-inline bool UdpPeer::setDestination(const std::string& address, const uint16_t& port) {
+bool UdpPeer::setDestination(const std::string& address, const uint16_t& port) {
     if (address.empty() || (0 == port)) {
         LOGE("[%s][%d] Invalid peer information!\n", __func__, __LINE__);
         return false;
@@ -100,15 +82,7 @@ inline bool UdpPeer::setDestination(const std::string& address, const uint16_t& 
     return true;
 }
 
-inline bool UdpPeer::checkRxPipe() {
-    return (0 < mSocketFd);
-}
-
-inline bool UdpPeer::checkTxPipe() {
-    return (!mPeerAddress.empty()) && (0 < mPeerPort);
-}
-
-inline ssize_t UdpPeer::lread(const std::unique_ptr<uint8_t[]>& pBuffer, const size_t& limit) {
+ssize_t UdpPeer::lread(const std::unique_ptr<uint8_t[]>& pBuffer, const size_t& limit) {
     socklen_t remoteAddressSize;
     struct sockaddr_in remoteSocketAddr;
     remoteAddressSize = (socklen_t)sizeof(remoteSocketAddr);
@@ -131,7 +105,7 @@ inline ssize_t UdpPeer::lread(const std::unique_ptr<uint8_t[]>& pBuffer, const s
     return ret;
 }
 
-inline ssize_t UdpPeer::lwrite(const std::unique_ptr<uint8_t[]>& pData, const size_t& size) {
+ssize_t UdpPeer::lwrite(const std::unique_ptr<uint8_t[]>& pData, const size_t& size) {
     std::lock_guard<std::mutex> lock(mPeerMutex);
 
     // Destination address
@@ -164,7 +138,7 @@ inline ssize_t UdpPeer::lwrite(const std::unique_ptr<uint8_t[]>& pData, const si
     return ret;
 }
 
-inline void UdpPeer::runRx() {
+void UdpPeer::runRx() {
     while(!mExitFlag) {
         if (!proceedRx()) {
             LOGE("[%s][%d]\n", __func__, __LINE__);
@@ -173,7 +147,7 @@ inline void UdpPeer::runRx() {
     }
 }
 
-inline void UdpPeer::runTx() {
+void UdpPeer::runTx() {
     while(!mExitFlag) {
         if (!proceedTx()) {
             LOGE("[%s][%d]\n", __func__, __LINE__);

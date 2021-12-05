@@ -18,16 +18,17 @@ namespace comm {
 
 class UdpPeer : public EndPoint {
  public:
-    virtual ~UdpPeer();
+    bool setDestination(const std::string& address, const uint16_t& port);
 
+    bool checkRxPipe() override;
+    bool checkTxPipe() override;
+
+    void stop();
+
+    virtual ~UdpPeer();
     static std::unique_ptr<UdpPeer> create(
         const uint16_t& localPort, const std::string& peerAddress, const uint16_t& peerPort
     );
-
-    void stop();
-    bool setDestination(const std::string& address, const uint16_t& port);
-    bool checkRxPipe() override;
-    bool checkTxPipe() override;
 
  protected:
     UdpPeer(
@@ -58,6 +59,6 @@ class UdpPeer : public EndPoint {
 
 }   // namespace comm
 
-#include "UdpPeer.inl"
+#include "inline/UdpPeer.inl"
 
 #endif // __UDPPEER_HPP__

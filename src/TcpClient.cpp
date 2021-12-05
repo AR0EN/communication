@@ -2,22 +2,7 @@
 
 namespace comm {
 
-inline TcpClient::TcpClient(const int& socketFd, const std::string serverAddr, uint16_t remotePort) {
-    mSocketFd = socketFd;
-    mServerAddress = serverAddr;
-    mRemotePort = remotePort;
-
-    mExitFlag = false;
-    mpRxThread.reset(new std::thread(&TcpClient::runRx, this));
-    mpTxThread.reset(new std::thread(&TcpClient::runTx, this));
-}
-
-inline TcpClient::~TcpClient() {
-    stop();
-    LOGI("[%s][%d] Finalized!\n", __func__, __LINE__);
-}
-
-inline std::unique_ptr<TcpClient> TcpClient::create(const std::string& serverAddr, const uint16_t& remotePort) {
+std::unique_ptr<TcpClient> TcpClient::create(const std::string& serverAddr, const uint16_t& remotePort) {
     std::unique_ptr<TcpClient> tcpClient;
 
     if (serverAddr.empty()) {
@@ -70,7 +55,7 @@ inline std::unique_ptr<TcpClient> TcpClient::create(const std::string& serverAdd
     return std::unique_ptr<TcpClient>(new TcpClient(socketFd, serverAddr, remotePort));
 }
 
-inline void TcpClient::stop() {
+void TcpClient::stop() {
     mExitFlag = true;
 
     if ((mpRxThread) && (mpRxThread->joinable())) {
@@ -89,15 +74,7 @@ inline void TcpClient::stop() {
     }
 }
 
-inline bool TcpClient::checkRxPipe() {
-    return (0 <= mSocketFd);
-}
-
-inline bool TcpClient::checkTxPipe() {
-    return (0 <= mSocketFd);
-}
-
-inline ssize_t TcpClient::lread(const std::unique_ptr<uint8_t[]>& pBuffer, const size_t& limit) {
+ssize_t TcpClient::lread(const std::unique_ptr<uint8_t[]>& pBuffer, const size_t& limit) {
     ssize_t ret = read(mSocketFd, pBuffer.get(), limit);
 
     if (0 > ret) {
@@ -114,7 +91,7 @@ inline ssize_t TcpClient::lread(const std::unique_ptr<uint8_t[]>& pBuffer, const
     return ret;
 }
 
-inline ssize_t TcpClient::lwrite(const std::unique_ptr<uint8_t[]>& pData, const size_t& size) {
+ssize_t TcpClient::lwrite(const std::unique_ptr<uint8_t[]>& pData, const size_t& size) {
     // Send data over TCP
     ssize_t ret = 0LL;
     for (int i = 0; i < TX_RETRY_COUNT; i++) {
@@ -137,7 +114,7 @@ inline ssize_t TcpClient::lwrite(const std::unique_ptr<uint8_t[]>& pData, const 
     return ret;
 }
 
-inline void TcpClient::runRx() {
+void TcpClient::runRx() {
     while(!mExitFlag) {
         if (!proceedRx()) {
             LOGE("[%s][%d]\n", __func__, __LINE__);
@@ -146,7 +123,7 @@ inline void TcpClient::runRx() {
     }
 }
 
-inline void TcpClient::runTx() {
+void TcpClient::runTx() {
     while(!mExitFlag) {
         if (!proceedTx()) {
             LOGE("[%s][%d]\n", __func__, __LINE__);

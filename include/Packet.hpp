@@ -54,6 +54,6 @@ class Packet {
 
 }   // namespace comm
 
-#include "Packet.inl"
+#include "inline/Packet.inl"
 
 #endif  // __PACKET_HPP__

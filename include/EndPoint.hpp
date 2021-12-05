@@ -9,6 +9,7 @@
 #include <mutex>
 #include <vector>
 
+#include "Encoder.hpp"
 #include "Packet.hpp"
 #include "SyncQueue.hpp"
 
@@ -22,19 +23,15 @@ class EndPoint {
     virtual ~EndPoint() {}
 
     bool send(std::unique_ptr<Packet>& pPacket);
-
     bool send(std::unique_ptr<Packet>&& pPacket);
 
     bool consumeRx(std::vector<std::unique_ptr<Packet>>& pRxPackets);
 
     virtual bool checkRxPipe();
-
     virtual bool checkTxPipe();
 
  protected:
-    EndPoint() {
-        mpRxBuffer.reset(new uint8_t[MAX_FRAME_SIZE]);
-    }
+    EndPoint() { mpRxBuffer.reset(new uint8_t[MAX_FRAME_SIZE]); }
 
     bool proceedRx();
     bool proceedTx();
@@ -47,6 +44,7 @@ class EndPoint {
 
  private:
     std::unique_ptr<uint8_t[]> mpRxBuffer;
+
     Decoder mDecoder;
 
     dstruct::SyncQueue<Packet> mTxQueue;
@@ -54,6 +52,6 @@ class EndPoint {
 
 }   // namespace comm
 
-#include "EndPoint.inl"
+#include "inline/EndPoint.inl"
 
 #endif // __ENPOINT_HPP__
