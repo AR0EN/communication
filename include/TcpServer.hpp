@@ -1,146 +1,61 @@
-#ifndef _TCP_SERVER_HPP_
-#define _TCP_SERVER_HPP_
+#ifndef __TCPSERVER_HPP__
+#define __TCPSERVER_HPP__
 
-#include "common.hpp"
-#include "Encoder.hpp"
-#include "Message.hpp"
+#include <arpa/inet.h>
+#include <cstdint>
+#include <sys/socket.h>
+#include <sys/time.h>
+#include <unistd.h>
 
 #include <atomic>
 #include <memory>
+#include <mutex>
 #include <thread>
-#include <vector>
 
-#include <stdio.h>
-#include <stdint.h>
-#include <unistd.h>
-#include <arpa/inet.h>
-#include <sys/socket.h>
-#include <sys/time.h>
+#include "common.hpp"
+#include "P2P_EndPoint.hpp"
+#include "Packet.hpp"
 
 namespace comm {
 
-class TcpServer : public DecodingObserver, public std::enable_shared_from_this<TcpServer> {
-public:
-    TcpServer(uint16_t rxPort) {
-        mRemoteSocketFd = -1;
+class TcpServer : public P2P_EndPoint {
+ public:
+    void close() override;
 
-        mSocketFd = socket(AF_INET, SOCK_STREAM, 0);
-        if (0 > mSocketFd) {
-            perror("Could not create TCP socket!\n");
-            mExitFlag = true;
-            return;
-        }
+    ~TcpServer();
+    static std::unique_ptr<TcpServer> create(uint16_t localPort);
 
-        int ret;
+    bool isClientConnected();
 
-        int enable = 1;
-        ret = setsockopt(mSocketFd, SOL_SOCKET, SO_REUSEADDR, &enable, sizeof(int));
-        if (0 > ret) {
-            perror("setsockopt(SO_REUSEADDR) -> false!\n");
-            mExitFlag = true;
-            return;
-        }
+ protected:
+    TcpServer(int localSocketFd);
 
-        struct timeval timeout;
-        timeout.tv_sec = RX_TIMEOUT_S;
-        timeout.tv_usec = 0;
-        ret = setsockopt (mSocketFd, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout));
-        if (0 > ret) {
-            perror("setsockopt(SO_RCVTIMEO) -> failed!\n");
-            mExitFlag = true;
-            return;
-        }
+    ssize_t lread(const std::unique_ptr<uint8_t[]>& pBuffer, const size_t& limit) override;
+    ssize_t lwrite(const std::unique_ptr<uint8_t[]>& pData, const size_t& size) override;
 
-        mRxPort = rxPort;
+ private:
+    void runRx();
+    void runTx();
 
-        struct sockaddr_in localSocketAddr;
-        localSocketAddr.sin_family      = AF_INET;
-        localSocketAddr.sin_addr.s_addr = INADDR_ANY;
-        localSocketAddr.sin_port = htons(mRxPort);
-        ret = bind(mSocketFd, (struct sockaddr *)&localSocketAddr, sizeof(localSocketAddr));
-        if (0 > ret) {
-            perror("bind() -> failed!\n");
-            return;
-        }
+    bool checkRxPipe();
+    bool checkTxPipe();
 
-        printf("Bound at port %d\n", mRxPort);
+    int mLocalSocketFd;
+    // TcpServer accept only one client at a time,
+    // therefore, accept & read take place in the same thread
+    // -> no need to use std::atomic for Rx Pipe
+    int mRxPipeFd;
+    std::atomic<int> mTxPipeFd;
 
-        ret = listen(mSocketFd, 3);
-        if (0 != ret) {
-            perror("listen() -> failed!\n");
-            return;
-        }
-
-        mExitFlag = false;
-    }
-
-    ~TcpServer() {
-        printf("TcpServer is finalizing ...!\n");
-        stop();
-    }
-
-    void stop() {
-        mExitFlag = true;
-
-        if ((pThread) && (pThread->joinable())) {
-            pThread->join();
-            pThread.reset();
-        }
-
-        if (0 <= mRemoteSocketFd) {
-            close(mRemoteSocketFd);
-            mRemoteSocketFd = -1;
-        }
-
-        if (0 <= mSocketFd) {
-            close(mSocketFd);
-            mSocketFd = -1;
-        }
-
-        printf("TcpServer has been finalized!\n");
-    }
-
-    csize_t send(IMessage& message);
-
-    bool start();
-    bool subscribe(const std::shared_ptr<IObserver>& pObserver);
-    // void unsubscribe() = 0;
-
-    // DecodingObserver implementation
-    void onComplete(const std::unique_ptr<uint8_t[]>& pData, const csize_t& size) {
-        if (pData) {
-            std::unique_ptr<Message> pMessage(new Message());
-            pMessage->deserialize(pData, size);
-
-            notify(pMessage);
-        }
-    }
-
-private:
-    void notify (const std::unique_ptr<Message>& pMessage) {
-        for (auto pObserver : mObservers) {
-            pObserver->onRecv(pMessage);
-        }
-    }
-
-    void run();
-    void receive();
-
-    int mSocketFd;
-    std::atomic<int> mRemoteSocketFd;
-    uint16_t mRxPort;
-
-    uint8_t mRxBuffer[MAX_PAYLOAD_SIZE << 1];
-
-    std::unique_ptr<Decoder> pDecoder;
-    std::vector<std::shared_ptr<IObserver>> mObservers;
-
-    std::unique_ptr<std::thread> pThread;
+    std::unique_ptr<std::thread> mpRxThread;
+    std::unique_ptr<std::thread> mpTxThread;
     std::atomic<bool> mExitFlag;
 
-    static constexpr int RX_TIMEOUT_S = 1;
-}; // class Peer
+    static constexpr int BACKLOG = 1;
+};  // class TcpServer
 
-}; // namespace comm
+}   // namespace comm
 
-#endif // _TCP_SERVER_HPP_
+#include "inline/TcpServer.inl"
+
+#endif // __TCPSERVER_HPP__

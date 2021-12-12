@@ -1,19 +1,43 @@
 #ifndef _COMMON_HPP_
 #define _COMMON_HPP_
 
-#include <stdint.h>
+#include <cstdio>
+#include <cstdint>
+
+#include <chrono>
+
+#define LOGI(...)   printf(__VA_ARGS__)
+#define LOGE(...)   fprintf(stderr, __VA_ARGS__)
+
+#ifdef DEBUG
+#define LOGD(...)   printf(__VA_ARGS__)
+#else
+#define LOGD(...)
+#endif
 
 namespace comm{
 
-constexpr uint8_t SF = 0xF0;
-constexpr uint8_t EF = 0x0F;
+// Frame Structure
+// 0xF0 (uint8_t) | Size of Payload (uint32_t LE) | Payload | 0x0F (uint8_t)
+constexpr uint8_t SF                   = 0xF0;
+constexpr size_t SF_SIZE               = 1;
 
-typedef int32_t csize_t;
-constexpr csize_t MAX_PAYLOAD_SIZE = 508;   // maximum safe UDP payload
+constexpr uint8_t EF                   = 0x0F;
+constexpr size_t EF_SIZE               = 1;
 
-inline bool ValidatePayloadSize(const csize_t& payloadSize) {
-    csize_t packetSize = sizeof(SF) + sizeof(csize_t) + payloadSize + sizeof(EF);
-    return (0 < packetSize) && (MAX_PAYLOAD_SIZE >= packetSize);
+constexpr size_t SIZE_OF_PAYLOAD_SIZE  = 4;
+
+constexpr size_t MAX_PAYLOAD_SIZE      = 1024;  // Avoid network fragmentation
+
+constexpr size_t MAX_FRAME_SIZE        = SF_SIZE + SIZE_OF_PAYLOAD_SIZE + MAX_PAYLOAD_SIZE + EF_SIZE;
+
+inline bool validate_payload_size(const size_t& payload_size) {
+    return (MAX_PAYLOAD_SIZE >= (SF_SIZE + SIZE_OF_PAYLOAD_SIZE + payload_size + EF_SIZE));
+}
+
+inline int64_t get_monotonic_us() {
+    return std::chrono::duration_cast<std::chrono::microseconds>(
+        std::chrono::steady_clock::now().time_since_epoch()).count();
 }
 
 }; // namespace comm

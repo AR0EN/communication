@@ -1,128 +1,63 @@
-#ifndef _UDP_PEER_HPP_
-#define _UDP_PEER_HPP_
+#ifndef __UDPPEER_HPP__
+#define __UDPPEER_HPP__
 
-#include "common.hpp"
-#include "Encoder.hpp"
-#include "Message.hpp"
-
-#include <atomic>
-#include <memory>
-#include <thread>
-#include <vector>
-
-#include <stdio.h>
-#include <stdint.h>
-#include <unistd.h>
 #include <arpa/inet.h>
+#include <cstdint>
 #include <sys/socket.h>
 #include <sys/time.h>
+#include <sys/types.h>
+
+#include <memory>
+#include <mutex>
+#include <thread>
+
+#include "common.hpp"
+#include "P2P_EndPoint.hpp"
+#include "Packet.hpp"
 
 namespace comm {
 
-class UdpPeer : public DecodingObserver, public std::enable_shared_from_this<UdpPeer> {
-public:
-    UdpPeer(uint16_t rxPort) {
-        mSocketFd = socket(AF_INET, SOCK_DGRAM, 0);
-        if (0 > mSocketFd) {
-            perror("Could not create UDP socket!\n");
-            mExitFlag = true;
-            return;
-        }
+class UdpPeer : public P2P_EndPoint {
+ public:
+    bool setDestination(const std::string& address, const uint16_t& port);
 
-        int enable = 1;
-        if (0 > setsockopt(mSocketFd, SOL_SOCKET, SO_REUSEADDR, &enable, sizeof(int))) {
-            perror("setsockopt(SO_REUSEADDR) -> false!\n");
-            mExitFlag = true;
-            return;
-        }
+    void close() override;
 
-        struct timeval timeout;
-        timeout.tv_sec = RX_TIMEOUT_S;
-        timeout.tv_usec = 0;
+    virtual ~UdpPeer();
+    static std::unique_ptr<UdpPeer> create(
+        const uint16_t& localPort, const std::string& peerAddress, const uint16_t& peerPort
+    );
 
-        if (0 > setsockopt (mSocketFd, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout))) {
-            perror("setsockopt(SO_RCVTIMEO) -> failed!\n");
-            mExitFlag = true;
-            return;
-        }
+ protected:
+    UdpPeer(
+        const int& socketFd, const uint16_t& localPort,
+        const std::string& peerAddress, const uint16_t& peerPort
+    );
 
-        mRxPort = rxPort;
+    ssize_t lread(const std::unique_ptr<uint8_t[]>& pBuffer, const size_t& limit) override;
+    ssize_t lwrite(const std::unique_ptr<uint8_t[]>& pData, const size_t& size) override;
 
-        struct sockaddr_in localSocketAddr;
-        localSocketAddr.sin_family      = AF_INET;
-        localSocketAddr.sin_addr.s_addr = INADDR_ANY;
-        localSocketAddr.sin_port = htons(mRxPort);
-        int ret = bind(mSocketFd, (struct sockaddr *)&localSocketAddr, sizeof(localSocketAddr));
-        if (0 > ret) {
-            perror("bind() -> failed!\n");
-            return;
-        }
+ private:
+    void runRx();
+    void runTx();
 
-        printf("Bound at port %d\n", mRxPort);
+    bool checkTxPipe();
 
-        mExitFlag = false;
-    }
-
-    ~UdpPeer() {
-        printf("Peer is finalizing ...!\n");
-        stop();
-    }
-
-    void stop() {
-        mExitFlag = true;
-
-        if ((pThread) && (pThread->joinable())) {
-            pThread->join();
-            pThread.reset();
-        }
-
-        if (0 <= mSocketFd) {
-            close(mSocketFd);
-            mSocketFd = -1;
-        }
-
-        printf("Finalized!\n");
-    }
-
-    csize_t send(const char * ipAddress, const uint16_t& port, IMessage& message);
-
-    bool start();
-    bool subscribe(const std::shared_ptr<IObserver>& pObserver);
-    // void unsubscribe() = 0;
-
-    // DecodingObserver implementation
-    void onComplete(const std::unique_ptr<uint8_t[]>& pData, const csize_t& size) override {
-        if (pData) {
-            std::unique_ptr<Message> pMessage(new Message());
-            pMessage->deserialize(pData, size);
-
-            notify(pMessage);
-        }
-    }
-
-private:
-    void notify (const std::unique_ptr<Message>& pMessage) {
-        for (auto pObserver : mObservers) {
-            pObserver->onRecv(pMessage);
-        }
-    }
-
-    void run();
-
+    // Local
     int mSocketFd;
-    uint16_t mRxPort;
+    uint16_t mLocalPort;
 
-    uint8_t mRxBuffer[MAX_PAYLOAD_SIZE << 1];
+    // Peer
+    struct sockaddr_in mPeerSockAddr;
+    std::mutex mTxMutex;
 
-    std::unique_ptr<Decoder> pDecoder;
-    std::vector<std::shared_ptr<IObserver>> mObservers;
-
-    std::unique_ptr<std::thread> pThread;
+    std::unique_ptr<std::thread> mpRxThread;
+    std::unique_ptr<std::thread> mpTxThread;
     std::atomic<bool> mExitFlag;
+};  // class Peer
 
-    static constexpr int RX_TIMEOUT_S = 1;
-}; // class Peer
+}   // namespace comm
 
-}; // namespace comm
+#include "inline/UdpPeer.inl"
 
-#endif // _UDP_PEER_HPP_
+#endif // __UDPPEER_HPP__

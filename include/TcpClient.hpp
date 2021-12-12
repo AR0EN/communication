@@ -1,131 +1,51 @@
-#ifndef _TCP_CLIENT_HPP_
-#define _TCP_CLIENT_HPP_
+#ifndef __TCPCLIENT_HPP__
+#define __TCPCLIENT_HPP__
 
-#include "common.hpp"
-#include "Encoder.hpp"
-#include "Message.hpp"
+#include <arpa/inet.h>
+#include <cstdint>
+#include <sys/socket.h>
+#include <sys/time.h>
+#include <unistd.h>
 
 #include <atomic>
 #include <memory>
+#include <string>
 #include <thread>
-#include <vector>
 
-#include <stdio.h>
-#include <stdint.h>
-#include <unistd.h>
-#include <arpa/inet.h>
-#include <sys/socket.h>
-#include <sys/time.h>
+#include "common.hpp"
+#include "Packet.hpp"
+#include "P2P_EndPoint.hpp"
 
 namespace comm {
 
-class TcpClient : public DecodingObserver, public std::enable_shared_from_this<TcpClient> {
-public:
-    TcpClient(const char * serverAddr, uint16_t remotePort) {
-        mSocketFd = socket(AF_INET, SOCK_STREAM, 0);
-        if (0 > mSocketFd) {
-            perror("Could not create TCP socket!\n");
-            mExitFlag = true;
-            return;
-        }
+class TcpClient : public P2P_EndPoint {
+ public:
+    void close() override;
 
-        int ret;
+    virtual ~TcpClient();
+    static std::unique_ptr<TcpClient> create(const std::string& serverAddr, const uint16_t& remotePort);
 
-        int enable = 1;
-        ret = setsockopt(mSocketFd, SOL_SOCKET, SO_REUSEADDR, &enable, sizeof(int));
-        if (0 > ret) {
-            perror("setsockopt(SO_REUSEADDR) -> false!\n");
-            mExitFlag = true;
-            return;
-        }
+ protected:
+    TcpClient(const int& socketFd, const std::string serverAddr, uint16_t remotePort);
 
-        struct timeval timeout;
-        timeout.tv_sec = RX_TIMEOUT_S;
-        timeout.tv_usec = 0;
-        ret = setsockopt (mSocketFd, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout));
-        if (0 > ret) {
-            perror("setsockopt(SO_RCVTIMEO) -> failed!\n");
-            mExitFlag = true;
-            return;
-        }
+    ssize_t lread(const std::unique_ptr<uint8_t[]>& pBuffer, const size_t& limit) override;
+    ssize_t lwrite(const std::unique_ptr<uint8_t[]>& pData, const size_t& size) override;
 
-        mRemotePort = remotePort;
+ private:
+    void runRx();
+    void runTx();
 
-        struct sockaddr_in remoteSocketAddr;
-        remoteSocketAddr.sin_family      = AF_INET;
-        remoteSocketAddr.sin_addr.s_addr = inet_addr(serverAddr);
-        remoteSocketAddr.sin_port = htons(mRemotePort);
-        ret = connect(mSocketFd, (struct sockaddr *)&remoteSocketAddr, sizeof(remoteSocketAddr));
-        if (0 != ret) {
-            perror("connect() -> failed!\n");
-            return;
-        }
-
-        printf("Connection has been established with %s/%d\n", serverAddr, mRemotePort);
-
-        mExitFlag = false;
-    }
-
-    ~TcpClient() {
-        printf("TcpClient is finalizing ...!\n");
-        stop();
-    }
-
-    void stop() {
-        mExitFlag = true;
-
-        if ((pThread) && (pThread->joinable())) {
-            pThread->join();
-            pThread.reset();
-        }
-
-        if (0 <= mSocketFd) {
-            close(mSocketFd);
-            mSocketFd = -1;
-        }
-
-        printf("TcpClient has been finalized!\n");
-    }
-
-    csize_t send(IMessage& message);
-
-    bool start();
-    bool subscribe(const std::shared_ptr<IObserver>& pObserver);
-    // void unsubscribe() = 0;
-
-    // DecodingObserver implementation
-    void onComplete(const std::unique_ptr<uint8_t[]>& pData, const csize_t& size) {
-        if (pData) {
-            std::unique_ptr<Message> pMessage(new Message());
-            pMessage->deserialize(pData, size);
-
-            notify(pMessage);
-        }
-    }
-
-private:
-    void notify (const std::unique_ptr<Message>& pMessage) {
-        for (auto pObserver : mObservers) {
-            pObserver->onRecv(pMessage);
-        }
-    }
-
-    void run();
-
-    int mSocketFd;
+    std::string mServerAddress;
     uint16_t mRemotePort;
+    int mSocketFd;
 
-    uint8_t mRxBuffer[MAX_PAYLOAD_SIZE << 1];
-
-    std::unique_ptr<Decoder> pDecoder;
-    std::vector<std::shared_ptr<IObserver>> mObservers;
-
-    std::unique_ptr<std::thread> pThread;
+    std::unique_ptr<std::thread> mpRxThread;
+    std::unique_ptr<std::thread> mpTxThread;
     std::atomic<bool> mExitFlag;
+};  // class TcpClient
 
-    static constexpr int RX_TIMEOUT_S = 1;
-}; // class Peer
+}   // namespace comm
 
-}; // namespace comm
+#include "inline/TcpClient.inl"
 
-#endif // _TCP_CLIENT_HPP_
+#endif // __TCPCLIENT_HPP__

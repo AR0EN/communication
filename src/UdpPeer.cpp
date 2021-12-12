@@ -1,119 +1,157 @@
-#include <errno.h>
-#include <stdint.h>
-#include <stdio.h>
-
-#include <memory>
-#include <thread>
-
-#include "common.hpp"
-#include "Encoder.hpp"
-#include "Message.hpp"
 #include "UdpPeer.hpp"
 
-comm::csize_t comm::UdpPeer::send(
-    const char * ipAddress, const uint16_t& port, comm::IMessage& message) {
+namespace comm {
 
-    int errorCode = -1;
+std::unique_ptr<UdpPeer> UdpPeer::create(
+    const uint16_t& localPort, const std::string& peerAddress, const uint16_t& peerPort
+) {
+    std::unique_ptr<UdpPeer> udpPeer;
 
-    // Check socket setup
-    if (0 > mSocketFd) {
-        printf("UDP socket has not been setup!\n");
-        return errorCode;
+    if (0 == localPort) {
+        LOGE("[%s][%d] Peer 's Port must be a positive value!\n", __func__, __LINE__);
+        return udpPeer;
     }
-    errorCode--;
 
-    // Prepare data for transmission
-    std::unique_ptr<uint8_t[]> pSerializedData;
-    csize_t serializedSize;
-
-    message.serialize(pSerializedData, serializedSize);
-
-    if (!pSerializedData) {
-        return errorCode;
+    int socketFd = socket(AF_INET, SOCK_DGRAM, 0);
+    if (0 > socketFd) {
+        perror("Could not create UDP socket!\n");
+        return udpPeer;
     }
-    errorCode--;
 
-    std::unique_ptr<uint8_t[]> pEncodedData;
-    csize_t encodedSize;
-
-    comm::encode(pSerializedData, serializedSize, pEncodedData, encodedSize);
-
-    if (!pEncodedData) {
-        return errorCode;
+    int enable = 1;
+    if (0 > setsockopt(socketFd, SOL_SOCKET, SO_REUSEADDR, &enable, sizeof(int))) {
+        perror("Failed to enable SO_REUSEADDR!\n");
+        ::close(socketFd);
+        return udpPeer;
     }
-    errorCode--;
 
-    // Destination address
-    struct sockaddr_in peerAddr;
-    peerAddr.sin_family      = AF_INET;
-    peerAddr.sin_port        = htons(port);
-    peerAddr.sin_addr.s_addr = inet_addr(ipAddress);
+    struct timeval timeout;
+    timeout.tv_sec = RX_TIMEOUT_S;
+    timeout.tv_usec = 0;
 
-    // Send data over UDP
-    int ret = sendto( \
-                mSocketFd, \
-                pEncodedData.get(), encodedSize, 0, \
-                (struct sockaddr *)&peerAddr, sizeof(peerAddr));
+    if (0 > setsockopt (socketFd, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout))) {
+        perror("Failed to configure SO_RCVTIMEO!\n");
+        ::close(socketFd);
+        return udpPeer;
+    }
+
+    struct sockaddr_in localSocketAddr;
+    localSocketAddr.sin_family      = AF_INET;
+    localSocketAddr.sin_addr.s_addr = INADDR_ANY;
+    localSocketAddr.sin_port        = htons(localPort);
+    int ret = bind(socketFd, (struct sockaddr *)&localSocketAddr, sizeof(localSocketAddr));
+    if (0 > ret) {
+        perror("Failed to bind socket!\n");
+        ::close(socketFd);
+        return nullptr;
+    }
+
+    LOGI("[%s][%d] Bound at port %u\n", __func__, __LINE__, localPort);
+    return std::unique_ptr<UdpPeer>(new UdpPeer(socketFd, localPort, peerAddress, peerPort));
+}
+
+void UdpPeer::close() {
+    mExitFlag = true;
+
+    if ((mpRxThread) && (mpRxThread->joinable())) {
+        mpRxThread->join();
+    }
+
+    if ((mpTxThread) && (mpTxThread->joinable())) {
+        mpTxThread->join();
+    }
+
+    if (0 <= mSocketFd) {
+        ::close(mSocketFd);
+        mSocketFd = -1;
+    }
+}
+
+bool UdpPeer::setDestination(const std::string& address, const uint16_t& port) {
+    if (address.empty() || (0 == port)) {
+        LOGE("[%s][%d] Invalid peer information (`%s`/%u)!\n", __func__, __LINE__, address.c_str(), port);
+        return false;
+    }
+
+    std::lock_guard<std::mutex> lock(mTxMutex);
+    mPeerSockAddr.sin_family      = AF_INET;
+    mPeerSockAddr.sin_port        = htons(port);
+    mPeerSockAddr.sin_addr.s_addr = inet_addr(address.c_str());
+
+    return true;
+}
+
+void UdpPeer::runRx() {
+    while(!mExitFlag) {
+        if (!proceedRx()) {
+            LOGE("[%s][%d] Rx Pipe was broken!\n", __func__, __LINE__);
+            break;
+        }
+    }
+}
+
+void UdpPeer::runTx() {
+    while(!mExitFlag) {
+        if (!checkTxPipe()) {
+            continue;
+        }
+
+        if (!proceedTx()) {
+            LOGE("[%s][%d] Tx Pipe was broken!\n", __func__, __LINE__);
+            break;
+        }
+    }
+}
+
+ssize_t UdpPeer::lread(const std::unique_ptr<uint8_t[]>& pBuffer, const size_t& limit) {
+    socklen_t remoteAddressSize;
+    struct sockaddr_in remoteSocketAddr;
+    remoteAddressSize = (socklen_t)sizeof(remoteSocketAddr);
+
+    ssize_t ret = recvfrom(
+                    mSocketFd, pBuffer.get(), limit, 0,
+                    reinterpret_cast<struct sockaddr *>(&remoteSocketAddr), &remoteAddressSize
+                );
 
     if (0 > ret) {
-        perror("Could not send data!\n");
-        ret = errorCode;
+        if (EWOULDBLOCK == errno) {
+            ret = 0;
+        } else {
+            perror("");
+        }
+    } else {
+        LOGD("[%s][%d] Received %ld bytes\n", __func__, __LINE__, ret);
     }
 
     return ret;
 }
 
-bool comm::UdpPeer::subscribe(const std::shared_ptr<IObserver>& pObserver) {
-    if (pObserver) {
-        mObservers.push_back(pObserver);
-    } else {
-        return false;
-    }
+ssize_t UdpPeer::lwrite(const std::unique_ptr<uint8_t[]>& pData, const size_t& size) {
+    // Send data over UDP
+    ssize_t ret = 0LL;
+    for (int i = 0; i < TX_RETRY_COUNT; i++) {
+        {
+            std::lock_guard<std::mutex> lock(mTxMutex);
+            ret = sendto(
+                            mSocketFd, pData.get(), size, 0,
+                            reinterpret_cast<struct sockaddr *>(&mPeerSockAddr), sizeof(mPeerSockAddr)
+                        );
+        }
 
-    return true;
-}
-
-bool comm::UdpPeer::start() {
-    // Check socket setup
-    if (0 > mSocketFd) {
-        printf("UDP socket has not been setup!\n");
-        return false;
-    }
-
-    if (!pThread) {
-        pDecoder.reset(new comm::Decoder());
-        pDecoder->subscribe(shared_from_this());
-
-        pThread.reset(new std::thread(&comm::UdpPeer::run, this));
-        return true;
-    }
-
-    return false;
-}
-
-void comm::UdpPeer::run() {
-    // Check socket setup
-    if (0 > mSocketFd) {
-        printf("UDP socket has not been setup!\n");
-        return;
-    }
-
-    socklen_t remoteAddressSize;
-    struct sockaddr_in remoteSocketAddr;
-    remoteAddressSize = (socklen_t)sizeof(remoteSocketAddr);
-
-    int ret;
-    while(!mExitFlag) {
-        ret = recvfrom(mSocketFd, mRxBuffer, sizeof(mRxBuffer), 0, (struct sockaddr *) &remoteSocketAddr, &remoteAddressSize);
-
-        if (0 < ret) {
-            pDecoder->feed(mRxBuffer, ret);
-        } else if ((0 > ret) && (EWOULDBLOCK != errno)) {
-            printf("Error code: %d\n", errno);
-            perror("recvfrom() -> failed!\n");
-            break;
+        if (0 > ret) {
+            if (EWOULDBLOCK == errno) {
+                // Ignore & retry
+            } else {
+                perror("");
+                break;
+            }
         } else {
-            // Rx timeout - Do nothing
+            LOGD("[%s][%d] Transmitted %ld bytes\n", __func__, __LINE__, ret);
+            break;
         }
     }
+
+    return ret;
 }
+
+}   // namespace comm

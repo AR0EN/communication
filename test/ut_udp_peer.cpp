@@ -3,7 +3,7 @@
 
 #include "Encoder.hpp"
 #include "Packet.hpp"
-#include "TcpServer.hpp"
+#include "UdpPeer.hpp"
 
 #include "test_vectors.hpp"
 #include "util.hpp"
@@ -34,58 +34,45 @@ bool test(const std::vector<std::unique_ptr<comm::Packet>>& pRxPackets) {
 }
 
 int main(int argc, char ** argv) {
-    if (2 > argc) {
-        LOGE("Usage: %s <Local Port>\n", argv[0]);
+    if (4 > argc) {
+        LOGI("Usage: %s <Local Port> <Peer Address> <Peer Port>\n", argv[0]);
         return 1;
     }
 
-    std::unique_ptr<comm::TcpServer> pTcpServer = comm::TcpServer::create(
-        static_cast<uint16_t>(atoi(argv[1]))
+    std::unique_ptr<comm::UdpPeer> pUdpPeer = comm::UdpPeer::create(
+        static_cast<uint16_t>(atoi(argv[1])), argv[2], static_cast<uint16_t>(atoi(argv[3]))
     );
 
-    if (!pTcpServer) {
-        LOGE("Could not create Tcp Server which listens at port %s!\n", argv[1]);
+    if (!pUdpPeer) {
+        LOGI("Could not create UdpPeer which listens at port %s!\n", argv[1]);
         return 1;
     }
 
-    LOGI("Tcp Server is ready, waiting for client ...\n");
+    LOGI("Press enter to continue ...\n");
+    getchar();
 
-    auto t0 = get_monotonic_clock();
-    while (!pTcpServer->isClientConnected()) {
-        if (
-            std::chrono::seconds(10) <
-            std::chrono::duration_cast<std::chrono::seconds>(get_monotonic_clock() - t0)
-        ) {
-            LOGE("Timeout!\n");
-            return 1;
-        }
+    for (size_t i = 0; i < vectors.size(); i++) {
+#ifdef USE_RAW_POINTER
+        pUdpPeer->send(comm::Packet::create(vectors[i], vectors_sizes[i]));
+#else
+        std::unique_ptr<uint8_t[]> pdata(new uint8_t[vectors_sizes[i]]);
+        memcpy(pdata.get(), vectors[i], vectors_sizes[i]);
+        pUdpPeer->send(comm::Packet::create(pdata, vectors_sizes[i]));
+#endif  // USE_RAW_POINTER
     }
 
-    LOGI("Connected to client, please enter to check Rx Queue ...\n");
+    LOGI("Press enter to check Rx Queue ...\n");
     getchar();
 
     std::vector<std::unique_ptr<comm::Packet>> pPackets;
-    if (pTcpServer->recvAll(pPackets)) {
+    if (pUdpPeer->recvAll(pPackets)) {
         if (test(pPackets)) {
             LOGI("-> Passed!\n");
         } else {
             LOGI("-> Failed!\n");
         }
     } else {
-        LOGE("Rx Queue is empty!\n");
-    }
-
-    LOGI("Press enter to sent data to client ...\n");
-    getchar();
-
-    for (size_t i = 0; i < vectors.size(); i++) {
-#ifdef USE_RAW_POINTER
-        pTcpServer->send(comm::Packet::create(vectors[i], vectors_sizes[i]));
-#else
-        std::unique_ptr<uint8_t[]> pdata(new uint8_t[vectors_sizes[i]]);
-        memcpy(pdata.get(), vectors[i], vectors_sizes[i]);
-        pTcpServer->send(comm::Packet::create(pdata, vectors_sizes[i]));
-#endif  // USE_RAW_POINTER
+        LOGI("Rx Queue is empty!\n");
     }
 
     LOGI("Press enter to exit ...\n");

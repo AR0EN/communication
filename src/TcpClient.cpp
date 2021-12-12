@@ -1,103 +1,131 @@
-#include <errno.h>
-#include <stdint.h>
-#include <stdio.h>
-
-#include <memory>
-#include <thread>
-
-#include "common.hpp"
-#include "Encoder.hpp"
-#include "Message.hpp"
 #include "TcpClient.hpp"
 
-comm::csize_t comm::TcpClient::send(comm::IMessage& message) {
-    int errorCode = -1;
+namespace comm {
 
-    // Check socket setup
-    if (0 > mSocketFd) {
-        printf("TCP connection is not ready!\n");
-        return errorCode;
+std::unique_ptr<TcpClient> TcpClient::create(const std::string& serverAddr, const uint16_t& remotePort) {
+    std::unique_ptr<TcpClient> tcpClient;
+
+    if (serverAddr.empty()) {
+        LOGE("[%s][%d] Server 's Address is invalid!\n", __func__, __LINE__);
+        return tcpClient;
     }
 
-    errorCode--;
-
-    // Prepare data for transmission
-    std::unique_ptr<uint8_t[]> pSerializedData;
-    csize_t serializedSize;
-
-    message.serialize(pSerializedData, serializedSize);
-
-    if (!pSerializedData) {
-        return errorCode;
+    if (0 == remotePort) {
+        LOGE("[%s][%d] Server 's Port must be a positive value!\n", __func__, __LINE__);
+        return tcpClient;
     }
-    errorCode--;
 
-    std::unique_ptr<uint8_t[]> pEncodedData;
-    csize_t encodedSize;
-
-    comm::encode(pSerializedData, serializedSize, pEncodedData, encodedSize);
-
-    if (!pEncodedData) {
-        return errorCode;
+    int socketFd = socket(AF_INET, SOCK_STREAM, 0);
+    if (0 > socketFd) {
+        perror("Could not create TCP socket!\n");
+        return tcpClient;
     }
-    errorCode--;
 
-    int ret = write(mSocketFd, pEncodedData.get(), encodedSize);
+    int enable = 1;
+    int ret = setsockopt(socketFd, SOL_SOCKET, SO_REUSEADDR, &enable, sizeof(int));
+    if (0 > ret) {
+        perror("Failed to enable SO_REUSEADDR!\n");
+        ::close(socketFd);
+        return tcpClient;
+    }
+
+    struct timeval timeout;
+    timeout.tv_sec = RX_TIMEOUT_S;
+    timeout.tv_usec = 0;
+    ret = setsockopt (socketFd, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout));
+    if (0 > ret) {
+        perror("Failed to configure SO_RCVTIMEO!\n");
+        ::close(socketFd);
+        return tcpClient;
+    }
+
+    struct sockaddr_in remoteSocketAddr;
+    remoteSocketAddr.sin_family      = AF_INET;
+    remoteSocketAddr.sin_addr.s_addr = inet_addr(serverAddr.c_str());
+    remoteSocketAddr.sin_port        = htons(remotePort);
+    ret = connect(socketFd, (struct sockaddr *)&remoteSocketAddr, sizeof(remoteSocketAddr));
+    if (0 != ret) {
+        perror("Failed to connect to server!\n");
+        ::close(socketFd);
+        return tcpClient;
+    }
+
+    LOGI("[%s][%d] Connected to %s/%u\n", __func__, __LINE__, serverAddr.c_str(), remotePort);
+
+    return std::unique_ptr<TcpClient>(new TcpClient(socketFd, serverAddr, remotePort));
+}
+
+void TcpClient::close() {
+    mExitFlag = true;
+
+    if ((mpRxThread) && (mpRxThread->joinable())) {
+        mpRxThread->join();
+    }
+
+    if ((mpTxThread) && (mpTxThread->joinable())) {
+        mpTxThread->join();
+    }
+
+    if (0 <= mSocketFd) {
+        ::close(mSocketFd);
+        mSocketFd = -1;
+    }
+}
+
+void TcpClient::runRx() {
+    while(!mExitFlag) {
+        if (!proceedRx()) {
+            LOGE("[%s][%d] Rx Pipe was broken!\n", __func__, __LINE__);
+            break;
+        }
+    }
+}
+
+void TcpClient::runTx() {
+    while(!mExitFlag) {
+        if (!proceedTx()) {
+            LOGE("[%s][%d] Tx Pipe was broken!\n", __func__, __LINE__);
+            break;
+        }
+    }
+}
+
+ssize_t TcpClient::lread(const std::unique_ptr<uint8_t[]>& pBuffer, const size_t& limit) {
+    ssize_t ret = read(mSocketFd, pBuffer.get(), limit);
 
     if (0 > ret) {
-        perror("write() -> failed!\n");
-        ret = errorCode;
+        if (EWOULDBLOCK == errno) {
+            ret = 0;
+        } else {
+            perror("");
+        }
+    } else {
+        LOGD("[%s][%d] Received %ld bytes\n", __func__, __LINE__, ret);
     }
 
     return ret;
 }
 
-bool comm::TcpClient::subscribe(const std::shared_ptr<IObserver>& pObserver) {
-    if (pObserver) {
-        mObservers.push_back(pObserver);
-    } else {
-        return false;
-    }
+ssize_t TcpClient::lwrite(const std::unique_ptr<uint8_t[]>& pData, const size_t& size) {
+    // Send data over TCP
+    ssize_t ret = 0LL;
+    for (int i = 0; i < TX_RETRY_COUNT; i++) {
+        ret = write(mSocketFd, pData.get(), size);
 
-    return true;
-}
-
-bool comm::TcpClient::start() {
-    // Check socket setup
-    if (0 > mSocketFd) {
-        printf("TCP connection is not ready!\n");
-        return false;
-    }
-
-    if (!pThread) {
-        pDecoder.reset(new comm::Decoder());
-        pDecoder->subscribe(shared_from_this());
-
-        pThread.reset(new std::thread(&comm::TcpClient::run, this));
-        return true;
-    }
-
-    return false;
-}
-
-void comm::TcpClient::run() {
-    // Check socket setup
-    if (0 > mSocketFd) {
-        printf("TCP connection is not ready!\n");
-        return;
-    }
-
-    int ret;
-    while(!mExitFlag) {
-        ret = read(mSocketFd, mRxBuffer, sizeof(mRxBuffer));
-        if (0 < ret) {
-            pDecoder->feed(mRxBuffer, ret);
-        } else if ((0 > ret) && (EWOULDBLOCK != errno)) {
-            printf("Error code: %d\n", errno);
-            perror("read() -> failed!\n");
-            break;
+        if (0 > ret) {
+            if (EWOULDBLOCK == errno) {
+                // Ignore & retry
+            } else {
+                perror("");
+                break;
+            }
         } else {
-            // Rx timeout - Do nothing
+            LOGD("[%s][%d] Transmitted %ld bytes\n", __func__, __LINE__, ret);
+            break;
         }
     }
+
+    return ret;
 }
+
+}   // namespace comm
