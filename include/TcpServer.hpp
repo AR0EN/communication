@@ -13,23 +13,20 @@
 #include <thread>
 
 #include "common.hpp"
-#include "EndPoint.hpp"
+#include "P2P_EndPoint.hpp"
 #include "Packet.hpp"
 
 namespace comm {
 
-class TcpServer : public EndPoint {
+class TcpServer : public P2P_EndPoint {
  public:
-    void stop();
+    void close() override;
 
     ~TcpServer();
     static std::unique_ptr<TcpServer> create(uint16_t localPort);
 
  protected:
     TcpServer(int localSocketFd);
-
-    bool checkRxPipe() override;
-    bool checkTxPipe() override;
 
     ssize_t lread(const std::unique_ptr<uint8_t[]>& pBuffer, const size_t& limit) override;
     ssize_t lwrite(const std::unique_ptr<uint8_t[]>& pData, const size_t& size) override;
@@ -38,8 +35,15 @@ class TcpServer : public EndPoint {
     void runRx();
     void runTx();
 
+    bool checkRxPipe();
+    bool checkTxPipe();
+
     int mLocalSocketFd;
-    std::atomic<int> mRemoteSocketFd;
+    // TcpServer accept only one client at a time,
+    // therefore, accept & read take place in the same thread
+    // -> no need to use std::atomic for Rx Pipe
+    int mRxPipeFd;
+    std::atomic<int> mTxPipeFd;
 
     std::unique_ptr<std::thread> mpRxThread;
     std::unique_ptr<std::thread> mpTxThread;

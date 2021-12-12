@@ -3,25 +3,27 @@
 namespace comm {
 
 inline TcpServer::TcpServer(int localSocketFd) {
-    mLocalSocketFd = localSocketFd;
-    mRemoteSocketFd = -1;
-
     mExitFlag = false;
+
+    mLocalSocketFd = localSocketFd;
+    mRxPipeFd = -1;
+    mTxPipeFd = -1;
+
     mpRxThread.reset(new std::thread(&TcpServer::runRx, this));
     mpTxThread.reset(new std::thread(&TcpServer::runTx, this));
 }
 
 inline TcpServer::~TcpServer() {
-    stop();
+    this->close();
     LOGI("[%s][%d] Finalized!\n", __func__, __LINE__);
 }
 
 inline bool TcpServer::checkRxPipe() {
-    return (0 <= mRemoteSocketFd);
+    return (0 < mRxPipeFd);
 }
 
 inline bool TcpServer::checkTxPipe() {
-    return (0 <= mRemoteSocketFd);
+    return (0 < mTxPipeFd);
 }
 
 }   // namespace comm

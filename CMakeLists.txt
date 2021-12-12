@@ -15,7 +15,7 @@ include_directories(include)
 
 add_library(
     comm STATIC
-    src/EndPoint.cpp
+    src/P2P_EndPoint.cpp
     src/TcpClient.cpp
     src/TcpServer.cpp
     src/UdpPeer.cpp

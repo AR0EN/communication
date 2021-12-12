@@ -25,7 +25,7 @@ std::unique_ptr<TcpClient> TcpClient::create(const std::string& serverAddr, cons
     int ret = setsockopt(socketFd, SOL_SOCKET, SO_REUSEADDR, &enable, sizeof(int));
     if (0 > ret) {
         perror("Failed to enable SO_REUSEADDR!\n");
-        close(socketFd);
+        ::close(socketFd);
         return tcpClient;
     }
 
@@ -35,7 +35,7 @@ std::unique_ptr<TcpClient> TcpClient::create(const std::string& serverAddr, cons
     ret = setsockopt (socketFd, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout));
     if (0 > ret) {
         perror("Failed to configure SO_RCVTIMEO!\n");
-        close(socketFd);
+        ::close(socketFd);
         return tcpClient;
     }
 
@@ -46,7 +46,7 @@ std::unique_ptr<TcpClient> TcpClient::create(const std::string& serverAddr, cons
     ret = connect(socketFd, (struct sockaddr *)&remoteSocketAddr, sizeof(remoteSocketAddr));
     if (0 != ret) {
         perror("Failed to connect to server!\n");
-        close(socketFd);
+        ::close(socketFd);
         return tcpClient;
     }
 
@@ -55,22 +55,38 @@ std::unique_ptr<TcpClient> TcpClient::create(const std::string& serverAddr, cons
     return std::unique_ptr<TcpClient>(new TcpClient(socketFd, serverAddr, remotePort));
 }
 
-void TcpClient::stop() {
+void TcpClient::close() {
     mExitFlag = true;
 
     if ((mpRxThread) && (mpRxThread->joinable())) {
         mpRxThread->join();
-        mpRxThread.reset();
     }
 
     if ((mpTxThread) && (mpTxThread->joinable())) {
         mpTxThread->join();
-        mpTxThread.reset();
     }
 
     if (0 <= mSocketFd) {
-        close(mSocketFd);
+        ::close(mSocketFd);
         mSocketFd = -1;
+    }
+}
+
+void TcpClient::runRx() {
+    while(!mExitFlag) {
+        if (!proceedRx()) {
+            LOGE("[%s][%d] Rx Pipe was broken!\n", __func__, __LINE__);
+            break;
+        }
+    }
+}
+
+void TcpClient::runTx() {
+    while(!mExitFlag) {
+        if (!proceedTx()) {
+            LOGE("[%s][%d] Tx Pipe was broken!\n", __func__, __LINE__);
+            break;
+        }
     }
 }
 
@@ -81,7 +97,6 @@ ssize_t TcpClient::lread(const std::unique_ptr<uint8_t[]>& pBuffer, const size_t
         if (EWOULDBLOCK == errno) {
             ret = 0;
         } else {
-            mSocketFd = -1;
             perror("");
         }
     } else {
@@ -101,7 +116,6 @@ ssize_t TcpClient::lwrite(const std::unique_ptr<uint8_t[]>& pData, const size_t&
             if (EWOULDBLOCK == errno) {
                 // Ignore & retry
             } else {
-                mSocketFd = -1;
                 perror("");
                 break;
             }
@@ -112,24 +126,6 @@ ssize_t TcpClient::lwrite(const std::unique_ptr<uint8_t[]>& pData, const size_t&
     }
 
     return ret;
-}
-
-void TcpClient::runRx() {
-    while(!mExitFlag) {
-        if (!proceedRx()) {
-            LOGE("[%s][%d]\n", __func__, __LINE__);
-            break;
-        }
-    }
-}
-
-void TcpClient::runTx() {
-    while(!mExitFlag) {
-        if (!proceedTx()) {
-            LOGE("[%s][%d]\n", __func__, __LINE__);
-            break;
-        }
-    }
 }
 
 }   // namespace comm

@@ -1,15 +1,8 @@
-#include "EndPoint.hpp"
+#include "P2P_EndPoint.hpp"
 
 namespace comm {
 
-bool EndPoint::proceedRx() {
-    std::lock_guard<std::mutex> lock(mRxMutex);
-
-    if (!checkRxPipe()) {
-        LOGD("[%s][%d] Rx pipe is closed!\n", __func__, __LINE__);
-        return true;
-    }
-
+bool P2P_EndPoint::proceedRx() {
     ssize_t byteCount = lread(mpRxBuffer, MAX_FRAME_SIZE);
 
     if (0 > byteCount) {
@@ -24,9 +17,7 @@ bool EndPoint::proceedRx() {
     return true;
 }
 
-bool EndPoint::proceedTx() {
-    std::lock_guard<std::mutex> lock(mTxMutex);
-
+bool P2P_EndPoint::proceedTx() {
     std::vector<std::unique_ptr<Packet>> pTxPackets;
     if (!mTxQueue.dequeue(pTxPackets) || (0 >= pTxPackets.size())) {
         // Tx queue is empty!
@@ -34,11 +25,6 @@ bool EndPoint::proceedTx() {
     }
 
     LOGD("[%s][%d] %lu packets in Tx queue\n", __func__, __LINE__, pTxPackets.size());
-
-    if (!checkTxPipe()) {
-        LOGD("[%s][%d] Tx pipe is closed!\n", __func__, __LINE__);
-        return true;
-    }
 
     std::unique_ptr<uint8_t[]> pEncodedData;
     size_t encodedSize;

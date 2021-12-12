@@ -13,23 +13,20 @@
 #include <thread>
 
 #include "common.hpp"
-#include "EndPoint.hpp"
 #include "Packet.hpp"
+#include "P2P_EndPoint.hpp"
 
 namespace comm {
 
-class TcpClient : public EndPoint {
+class TcpClient : public P2P_EndPoint {
  public:
-    void stop();
+    void close() override;
 
     virtual ~TcpClient();
     static std::unique_ptr<TcpClient> create(const std::string& serverAddr, const uint16_t& remotePort);
 
  protected:
     TcpClient(const int& socketFd, const std::string serverAddr, uint16_t remotePort);
-
-    bool checkRxPipe() override;
-    bool checkTxPipe() override;
 
     ssize_t lread(const std::unique_ptr<uint8_t[]>& pBuffer, const size_t& limit) override;
     ssize_t lwrite(const std::unique_ptr<uint8_t[]>& pData, const size_t& size) override;
@@ -40,7 +37,7 @@ class TcpClient : public EndPoint {
 
     std::string mServerAddress;
     uint16_t mRemotePort;
-    std::atomic<int> mSocketFd;
+    int mSocketFd;
 
     std::unique_ptr<std::thread> mpRxThread;
     std::unique_ptr<std::thread> mpTxThread;

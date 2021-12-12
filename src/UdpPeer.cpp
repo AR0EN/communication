@@ -21,7 +21,7 @@ std::unique_ptr<UdpPeer> UdpPeer::create(
     int enable = 1;
     if (0 > setsockopt(socketFd, SOL_SOCKET, SO_REUSEADDR, &enable, sizeof(int))) {
         perror("Failed to enable SO_REUSEADDR!\n");
-        close(socketFd);
+        ::close(socketFd);
         return udpPeer;
     }
 
@@ -31,7 +31,7 @@ std::unique_ptr<UdpPeer> UdpPeer::create(
 
     if (0 > setsockopt (socketFd, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout))) {
         perror("Failed to configure SO_RCVTIMEO!\n");
-        close(socketFd);
+        ::close(socketFd);
         return udpPeer;
     }
 
@@ -42,7 +42,7 @@ std::unique_ptr<UdpPeer> UdpPeer::create(
     int ret = bind(socketFd, (struct sockaddr *)&localSocketAddr, sizeof(localSocketAddr));
     if (0 > ret) {
         perror("Failed to bind socket!\n");
-        close(socketFd);
+        ::close(socketFd);
         return nullptr;
     }
 
@@ -50,36 +50,57 @@ std::unique_ptr<UdpPeer> UdpPeer::create(
     return std::unique_ptr<UdpPeer>(new UdpPeer(socketFd, localPort, peerAddress, peerPort));
 }
 
-void UdpPeer::stop() {
+void UdpPeer::close() {
     mExitFlag = true;
 
     if ((mpRxThread) && (mpRxThread->joinable())) {
         mpRxThread->join();
-        mpRxThread.reset();
     }
 
     if ((mpTxThread) && (mpTxThread->joinable())) {
         mpTxThread->join();
-        mpTxThread.reset();
     }
 
     if (0 <= mSocketFd) {
-        close(mSocketFd);
+        ::close(mSocketFd);
         mSocketFd = -1;
     }
 }
 
 bool UdpPeer::setDestination(const std::string& address, const uint16_t& port) {
     if (address.empty() || (0 == port)) {
-        LOGE("[%s][%d] Invalid peer information!\n", __func__, __LINE__);
+        LOGE("[%s][%d] Invalid peer information (`%s`/%u)!\n", __func__, __LINE__, address.c_str(), port);
         return false;
     }
 
     std::lock_guard<std::mutex> lock(mTxMutex);
-    mPeerAddress = address;
-    mPeerPort = port;
+    mPeerSockAddr.sin_family      = AF_INET;
+    mPeerSockAddr.sin_port        = htons(port);
+    mPeerSockAddr.sin_addr.s_addr = inet_addr(address.c_str());
 
     return true;
+}
+
+void UdpPeer::runRx() {
+    while(!mExitFlag) {
+        if (!proceedRx()) {
+            LOGE("[%s][%d] Rx Pipe was broken!\n", __func__, __LINE__);
+            break;
+        }
+    }
+}
+
+void UdpPeer::runTx() {
+    while(!mExitFlag) {
+        if (!checkTxPipe()) {
+            continue;
+        }
+
+        if (!proceedTx()) {
+            LOGE("[%s][%d] Tx Pipe was broken!\n", __func__, __LINE__);
+            break;
+        }
+    }
 }
 
 ssize_t UdpPeer::lread(const std::unique_ptr<uint8_t[]>& pBuffer, const size_t& limit) {
@@ -106,26 +127,23 @@ ssize_t UdpPeer::lread(const std::unique_ptr<uint8_t[]>& pBuffer, const size_t& 
 }
 
 ssize_t UdpPeer::lwrite(const std::unique_ptr<uint8_t[]>& pData, const size_t& size) {
-    // Destination address
-    struct sockaddr_in peerAddr;
-    peerAddr.sin_family      = AF_INET;
-    peerAddr.sin_port        = htons(mPeerPort);
-    peerAddr.sin_addr.s_addr = inet_addr(mPeerAddress.c_str());
-
     // Send data over UDP
     ssize_t ret = 0LL;
     for (int i = 0; i < TX_RETRY_COUNT; i++) {
-        ret = sendto(
-                        mSocketFd, pData.get(), size, 0,
-                        reinterpret_cast<struct sockaddr *>(&peerAddr), sizeof(peerAddr)
-                    );
+        {
+            std::lock_guard<std::mutex> lock(mTxMutex);
+            ret = sendto(
+                            mSocketFd, pData.get(), size, 0,
+                            reinterpret_cast<struct sockaddr *>(&mPeerSockAddr), sizeof(mPeerSockAddr)
+                        );
+        }
 
         if (0 > ret) {
-            if (EWOULDBLOCK != errno) {
+            if (EWOULDBLOCK == errno) {
+                // Ignore & retry
+            } else {
                 perror("");
                 break;
-            } else {
-                // Ignore & retry
             }
         } else {
             LOGD("[%s][%d] Transmitted %ld bytes\n", __func__, __LINE__, ret);
@@ -134,24 +152,6 @@ ssize_t UdpPeer::lwrite(const std::unique_ptr<uint8_t[]>& pData, const size_t& s
     }
 
     return ret;
-}
-
-void UdpPeer::runRx() {
-    while(!mExitFlag) {
-        if (!proceedRx()) {
-            LOGE("[%s][%d]\n", __func__, __LINE__);
-            break;
-        }
-    }
-}
-
-void UdpPeer::runTx() {
-    while(!mExitFlag) {
-        if (!proceedTx()) {
-            LOGE("[%s][%d]\n", __func__, __LINE__);
-            break;
-        }
-    }
 }
 
 }   // namespace comm

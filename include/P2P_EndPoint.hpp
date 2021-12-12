@@ -5,6 +5,7 @@
 #include <cstdint>
 #include <unistd.h>
 
+#include <atomic>
 #include <memory>
 #include <mutex>
 #include <vector>
@@ -18,39 +19,36 @@ namespace comm {
 static constexpr time_t RX_TIMEOUT_S = 1LL;
 static constexpr int TX_RETRY_COUNT = 3;
 
-class EndPoint {
+class P2P_EndPoint {
  public:
-    virtual ~EndPoint() {}
+    virtual ~P2P_EndPoint() {}
 
     bool send(std::unique_ptr<Packet>& pPacket);
     bool send(std::unique_ptr<Packet>&& pPacket);
     bool recvAll(std::vector<std::unique_ptr<Packet>>& pRxPackets);
 
-    bool proceedRx();
-    bool proceedTx();
+    virtual void close() = 0;
 
  protected:
-    EndPoint() { mpRxBuffer.reset(new uint8_t[MAX_FRAME_SIZE]); }
+    P2P_EndPoint() {
+        mpRxBuffer.reset(new uint8_t[MAX_FRAME_SIZE]);
+    }
 
-    virtual bool checkRxPipe();
-    virtual bool checkTxPipe();
+    bool proceedRx();
+    bool proceedTx();
 
     virtual ssize_t lread(const std::unique_ptr<uint8_t[]>&, const size_t&) = 0;
     virtual ssize_t lwrite(const std::unique_ptr<uint8_t[]>&, const size_t&) = 0;
 
-    std::mutex mRxMutex;
-    std::mutex mTxMutex;
-
  private:
     std::unique_ptr<uint8_t[]> mpRxBuffer;
-
     Decoder mDecoder;
 
     dstruct::SyncQueue<Packet> mTxQueue;
-};  // class EndPoint
+};  // class P2P_EndPoint
 
 }   // namespace comm
 
-#include "inline/EndPoint.inl"
+#include "inline/P2P_EndPoint.inl"
 
 #endif // __ENPOINT_HPP__

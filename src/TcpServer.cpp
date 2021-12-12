@@ -20,7 +20,7 @@ std::unique_ptr<TcpServer> TcpServer::create(uint16_t localPort) {
     int ret = setsockopt(localSocketFd, SOL_SOCKET, SO_REUSEADDR, &enable, sizeof(int));
     if (0 > ret) {
         perror("Failed to enable SO_REUSEADDR!\n");
-        close(localSocketFd);
+        ::close(localSocketFd);
         return tcpServer;
     }
 
@@ -30,7 +30,7 @@ std::unique_ptr<TcpServer> TcpServer::create(uint16_t localPort) {
     ret = setsockopt (localSocketFd, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout));
     if (0 > ret) {
         perror("Failed to configure SO_RCVTIMEO!\n");
-        close(localSocketFd);
+        ::close(localSocketFd);
         return tcpServer;
     }
 
@@ -41,14 +41,14 @@ std::unique_ptr<TcpServer> TcpServer::create(uint16_t localPort) {
     ret = bind(localSocketFd, (struct sockaddr *)&localSocketAddr, sizeof(localSocketAddr));
     if (0 > ret) {
         perror("Failed to assigns address to the socket!\n");
-        close(localSocketFd);
+        ::close(localSocketFd);
         return tcpServer;
     }
 
     ret = listen(localSocketFd, BACKLOG);
     if (0 != ret) {
         perror("Failed to mark the socket as a passive socket!\n");
-        close(localSocketFd);
+        ::close(localSocketFd);
         return tcpServer;
     }
 
@@ -57,33 +57,77 @@ std::unique_ptr<TcpServer> TcpServer::create(uint16_t localPort) {
     return std::unique_ptr<TcpServer>(new TcpServer(localSocketFd));
 }
 
-void TcpServer::stop() {
+void TcpServer::close() {
     mExitFlag = true;
 
     if ((mpRxThread) && (mpRxThread->joinable())) {
         mpRxThread->join();
-        mpRxThread.reset();
     }
 
     if ((mpTxThread) && (mpTxThread->joinable())) {
         mpTxThread->join();
-        mpTxThread.reset();
     }
 
     if (0 <= mLocalSocketFd) {
-        close(mLocalSocketFd);
+        ::close(mLocalSocketFd);
         mLocalSocketFd = -1;
     }
 }
 
+void TcpServer::runRx() {
+    struct sockaddr_in remoteSocketAddr;
+    socklen_t remoteAddressSize = static_cast<socklen_t>(sizeof(remoteSocketAddr));
+
+    while(!mExitFlag) {
+        mRxPipeFd = accept(
+                                mLocalSocketFd,
+                                reinterpret_cast<struct sockaddr*>(&remoteSocketAddr),
+                                &remoteAddressSize
+                            );
+
+        if (!checkRxPipe()) {
+            if (EAGAIN == errno) {
+                // Timeout - do nothing
+                continue;
+            } else {
+                perror("Could not access connection queue!\n");
+                break;
+            }
+        }
+
+        mTxPipeFd = mRxPipeFd;
+
+        while(!mExitFlag) {
+            if (!proceedRx()) {
+                LOGE("[%s][%d] Rx Pipe was broken!\n", __func__, __LINE__);
+                break;
+            }
+        }
+
+        mTxPipeFd = -1;
+        ::close(mRxPipeFd);
+    }
+}
+
+void TcpServer::runTx() {
+    while(!mExitFlag) {
+        if (!checkTxPipe()) {
+            continue;
+        }
+
+        if (!proceedTx()) {
+            LOGE("[%s][%d] Tx Pipe was broken!\n", __func__, __LINE__);
+        }
+    }
+}
+
 ssize_t TcpServer::lread(const std::unique_ptr<uint8_t[]>& pBuffer, const size_t& limit) {
-    ssize_t ret = read(mRemoteSocketFd, pBuffer.get(), limit);
+    ssize_t ret = read(mRxPipeFd, pBuffer.get(), limit);
 
     if (0 > ret) {
         if (EWOULDBLOCK == errno) {
             ret = 0;
         } else {
-            mRemoteSocketFd = -1;
             perror("");
         }
     } else {
@@ -97,11 +141,11 @@ ssize_t TcpServer::lwrite(const std::unique_ptr<uint8_t[]>& pData, const size_t&
     // Send data over TCP
     ssize_t ret = 0LL;
     for (int i = 0; i < TX_RETRY_COUNT; i++) {
-        ret = write(mRemoteSocketFd, pData.get(), size);
+        ret = write(mTxPipeFd, pData.get(), size);
 
         if (0 > ret) {
             if (EWOULDBLOCK != errno) {
-                mRemoteSocketFd = -1;
+                mTxPipeFd = -1;
                 perror("");
                 break;
             } else {
@@ -114,52 +158,6 @@ ssize_t TcpServer::lwrite(const std::unique_ptr<uint8_t[]>& pData, const size_t&
     }
 
     return ret;
-}
-
-void TcpServer::runRx() {
-    struct sockaddr_in remoteSocketAddr;
-    socklen_t remoteAddressSize = static_cast<socklen_t>(sizeof(remoteSocketAddr));
-
-    while(!mExitFlag) {
-        {
-            mRemoteSocketFd = accept(
-                                    mLocalSocketFd,
-                                    reinterpret_cast<struct sockaddr*>(&remoteSocketAddr),
-                                    &remoteAddressSize
-                                );
-
-            if (0 > mRemoteSocketFd) {
-                if (EAGAIN == errno) {
-                    // Timeout - do nothing
-                    continue;
-                } else {
-                    perror("Could not access connection queue!\n");
-                    break;
-                }
-            }
-        }
-
-        while(!mExitFlag) {
-            if (!proceedRx()) {
-                LOGE("[%s][%d]\n", __func__, __LINE__);
-                break;
-            }
-        }
-
-        {
-            close(mRemoteSocketFd);
-            mRemoteSocketFd = -1;
-        }
-    }
-}
-
-void TcpServer::runTx() {
-    while(!mExitFlag) {
-        if (!proceedTx()) {
-            LOGE("[%s][%d]\n", __func__, __LINE__);
-
-        }
-    }
 }
 
 }   // namespace comm

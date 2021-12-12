@@ -12,16 +12,16 @@
 #include <thread>
 
 #include "common.hpp"
-#include "EndPoint.hpp"
+#include "P2P_EndPoint.hpp"
 #include "Packet.hpp"
 
 namespace comm {
 
-class UdpPeer : public EndPoint {
+class UdpPeer : public P2P_EndPoint {
  public:
     bool setDestination(const std::string& address, const uint16_t& port);
 
-    void stop();
+    void close() override;
 
     virtual ~UdpPeer();
     static std::unique_ptr<UdpPeer> create(
@@ -34,9 +34,6 @@ class UdpPeer : public EndPoint {
         const std::string& peerAddress, const uint16_t& peerPort
     );
 
-    bool checkRxPipe() override;
-    bool checkTxPipe() override;
-
     ssize_t lread(const std::unique_ptr<uint8_t[]>& pBuffer, const size_t& limit) override;
     ssize_t lwrite(const std::unique_ptr<uint8_t[]>& pData, const size_t& size) override;
 
@@ -44,13 +41,15 @@ class UdpPeer : public EndPoint {
     void runRx();
     void runTx();
 
+    bool checkTxPipe();
+
     // Local
     int mSocketFd;
     uint16_t mLocalPort;
 
     // Peer
-    std::string mPeerAddress;
-    uint16_t mPeerPort;
+    struct sockaddr_in mPeerSockAddr;
+    std::mutex mTxMutex;
 
     std::unique_ptr<std::thread> mpRxThread;
     std::unique_ptr<std::thread> mpTxThread;

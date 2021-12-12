@@ -1,8 +1,8 @@
-#include "EndPoint.hpp"
+#include "P2P_EndPoint.hpp"
 
 namespace comm {
 
-inline bool EndPoint::send(std::unique_ptr<Packet>& pPacket) {
+inline bool P2P_EndPoint::send(std::unique_ptr<Packet>& pPacket) {
     if (pPacket) {
         mTxQueue.enqueue(pPacket);
         return true;
@@ -12,7 +12,7 @@ inline bool EndPoint::send(std::unique_ptr<Packet>& pPacket) {
     }
 }
 
-inline bool EndPoint::send(std::unique_ptr<Packet>&& pPacket) {
+inline bool P2P_EndPoint::send(std::unique_ptr<Packet>&& pPacket) {
     if (pPacket) {
         mTxQueue.enqueue(pPacket);
         return true;
@@ -22,17 +22,7 @@ inline bool EndPoint::send(std::unique_ptr<Packet>&& pPacket) {
     }
 }
 
-inline bool EndPoint::checkRxPipe() {
-    LOGD("[%s][%d]\n", __func__, __LINE__);
-    return true;
-}
-
-inline bool EndPoint::checkTxPipe() {
-    LOGD("[%s][%d]\n", __func__, __LINE__);
-    return true;
-}
-
-inline bool EndPoint::recvAll(std::vector<std::unique_ptr<Packet>>& pRxPackets) {
+inline bool P2P_EndPoint::recvAll(std::vector<std::unique_ptr<Packet>>& pRxPackets) {
     return mDecoder.dequeue(pRxPackets);
 }
 
