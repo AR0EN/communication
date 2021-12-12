@@ -8,9 +8,12 @@ set(CMAKE_CXX_STANDARD 11)
 OPTION(DEFINE_DEBUG "Enable debug log" OFF) # Disabled by default
 IF (DEFINE_DEBUG)
 add_definitions(-DDEBUG)
+add_compile_options(-g)
+ELSE()
+add_compile_options(-O3)
 ENDIF (DEFINE_DEBUG)
 
-add_compile_options(-g -Wall)
+add_compile_options(-Wall)
 include_directories(include)
 
 add_library(
@@ -23,9 +26,23 @@ add_library(
 
 # add `-DBUILD_TESTS=ON` to compile unit tests
 OPTION(BUILD_TESTS "Enable unit tests" OFF) # Disabled by default
-IF (BUILD_TESTS)
 
+# add `-DUSE_RAW_POINTER=ON` to enable debug log
+OPTION(USE_RAW_POINTER "Switch to Raw Pointers" OFF) # Disabled by default
+
+IF (BUILD_TESTS)
+message("")
 message("Tests will be compiled!")
+message("")
+
+IF (USE_RAW_POINTER)
+message("")
+message("Tests will use Raw Pointers!")
+message("")
+add_definitions(-DUSE_RAW_POINTER)
+
+ENDIF (USE_RAW_POINTER)
+
 include_directories(test)
 
 # Test vector

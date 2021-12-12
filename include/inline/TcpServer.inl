@@ -18,6 +18,10 @@ inline TcpServer::~TcpServer() {
     LOGI("[%s][%d] Finalized!\n", __func__, __LINE__);
 }
 
+inline bool TcpServer::isClientConnected() {
+    return checkTxPipe();
+}
+
 inline bool TcpServer::checkRxPipe() {
     return (0 < mRxPipeFd);
 }

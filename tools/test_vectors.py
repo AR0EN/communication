@@ -22,11 +22,11 @@ with open(VECTOR_SRC, 'w') as fw:
     fw.write('#include <vector>\n\n')
     fw.write('#include "{}"\n\n'.format(VECTOR_HEADER))
 
-    vectors_txt = 'std::vector<uint8_t *> vectors = {'
+    vectors_txt = 'std::vector<const uint8_t *> vectors = {'
     vectors_sizes_txt = 'std::vector<size_t> vectors_sizes = {'
 
     for i, v in enumerate(vectors):
-        fw.write('uint8_t v' + str(i) + '[] = {\n')
+        fw.write('const uint8_t v' + str(i) + '[] = {\n')
         tmp = ''
         for j, val in enumerate(v):
             tmp += '0x{0:02X},'.format(val)
@@ -55,7 +55,13 @@ with open(VECTOR_HEADER, 'w') as fw:
     fw.write('#include <cstdint>\n\n')
     fw.write('#include <vector>\n\n')
 
-    fw.write('extern std::vector<uint8_t *> vectors;\n')
+    fw.write('#ifdef USE_RAW_POINTER\n')
+    fw.write('#warning "Tests will use Raw Pointers"\n')
+    fw.write('#else\n')
+    fw.write('#warning "Tests will use Smart Pointers"\n')
+    fw.write('#endif\n\n')
+
+    fw.write('extern std::vector<const uint8_t *> vectors;\n')
     fw.write('extern std::vector<size_t> vectors_sizes;\n\n')
 
 

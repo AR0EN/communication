@@ -35,7 +35,7 @@ bool test(const std::vector<std::unique_ptr<comm::Packet>>& pRxPackets) {
 
 int main(int argc, char ** argv) {
     if (2 > argc) {
-        LOGI("Usage: %s <Local Port>\n", argv[0]);
+        LOGE("Usage: %s <Local Port>\n", argv[0]);
         return 1;
     }
 
@@ -44,11 +44,24 @@ int main(int argc, char ** argv) {
     );
 
     if (!pTcpServer) {
-        LOGI("Could not create Tcp Server which listens at port %s!\n", argv[1]);
+        LOGE("Could not create Tcp Server which listens at port %s!\n", argv[1]);
         return 1;
     }
 
-    LOGI("Tcp Server is ready, press any key to check Rx queue ...\n");
+    LOGI("Tcp Server is ready, waiting for client ...\n");
+
+    auto t0 = get_monotonic_clock();
+    while (!pTcpServer->isClientConnected()) {
+        if (
+            std::chrono::seconds(10) <
+            std::chrono::duration_cast<std::chrono::seconds>(get_monotonic_clock() - t0)
+        ) {
+            LOGE("Timeout!\n");
+            return 1;
+        }
+    }
+
+    LOGI("Connected to client, please enter to check Rx Queue ...\n");
     getchar();
 
     std::vector<std::unique_ptr<comm::Packet>> pPackets;
@@ -59,19 +72,23 @@ int main(int argc, char ** argv) {
             LOGI("-> Failed!\n");
         }
     } else {
-        LOGI("Rx queue is empty!\n");
+        LOGE("Rx Queue is empty!\n");
     }
 
-    LOGI("Press any key to continnue ...\n");
+    LOGI("Press enter to sent data to client ...\n");
     getchar();
 
     for (size_t i = 0; i < vectors.size(); i++) {
+#ifdef USE_RAW_POINTER
+        pTcpServer->send(comm::Packet::create(vectors[i], vectors_sizes[i]));
+#else
         std::unique_ptr<uint8_t[]> pdata(new uint8_t[vectors_sizes[i]]);
         memcpy(pdata.get(), vectors[i], vectors_sizes[i]);
         pTcpServer->send(comm::Packet::create(pdata, vectors_sizes[i]));
+#endif  // USE_RAW_POINTER
     }
 
-    LOGI("Press any key to continnue ...\n");
+    LOGI("Press enter to exit ...\n");
     getchar();
 
     return 0;

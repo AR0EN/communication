@@ -27,6 +27,12 @@ class Packet {
         const int64_t& timestampUs=-1
     );
 
+    static std::unique_ptr<Packet> create(
+        const uint8_t * const& pPayload,
+        const size_t& payloadSize,
+        const int64_t& timestampUs=-1
+    );
+
     const std::unique_ptr<uint8_t[]>& getPayload() {
         return mpPayload;
     }
@@ -42,6 +48,12 @@ class Packet {
  protected:
     Packet(
         const std::unique_ptr<uint8_t[]>& pPayload,
+        const size_t& payloadSize,
+        const int64_t& timestampUs
+    );
+
+    Packet(
+        const uint8_t * const& pPayload,
         const size_t& payloadSize,
         const int64_t& timestampUs
     );

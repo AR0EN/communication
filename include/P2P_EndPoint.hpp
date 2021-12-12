@@ -1,5 +1,5 @@
-#ifndef __ENPOINT_HPP__
-#define __ENPOINT_HPP__
+#ifndef __P2P_ENPOINT_HPP__
+#define __P2P_ENPOINT_HPP__
 
 #include <errno.h>
 #include <cstdint>
@@ -51,4 +51,4 @@ class P2P_EndPoint {
 
 #include "inline/P2P_EndPoint.inl"
 
-#endif // __ENPOINT_HPP__
+#endif // __P2P_ENPOINT_HPP__

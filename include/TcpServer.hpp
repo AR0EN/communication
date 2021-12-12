@@ -25,6 +25,8 @@ class TcpServer : public P2P_EndPoint {
     ~TcpServer();
     static std::unique_ptr<TcpServer> create(uint16_t localPort);
 
+    bool isClientConnected();
+
  protected:
     TcpServer(int localSocketFd);
 

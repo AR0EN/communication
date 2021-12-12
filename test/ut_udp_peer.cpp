@@ -48,16 +48,20 @@ int main(int argc, char ** argv) {
         return 1;
     }
 
-    LOGI("Press any key to continue ...\n");
+    LOGI("Press enter to continue ...\n");
     getchar();
 
     for (size_t i = 0; i < vectors.size(); i++) {
+#ifdef USE_RAW_POINTER
+        pUdpPeer->send(comm::Packet::create(vectors[i], vectors_sizes[i]));
+#else
         std::unique_ptr<uint8_t[]> pdata(new uint8_t[vectors_sizes[i]]);
         memcpy(pdata.get(), vectors[i], vectors_sizes[i]);
         pUdpPeer->send(comm::Packet::create(pdata, vectors_sizes[i]));
+#endif  // USE_RAW_POINTER
     }
 
-    LOGI("Press any key to check Rx queue ...\n");
+    LOGI("Press enter to check Rx Queue ...\n");
     getchar();
 
     std::vector<std::unique_ptr<comm::Packet>> pPackets;
@@ -68,10 +72,10 @@ int main(int argc, char ** argv) {
             LOGI("-> Failed!\n");
         }
     } else {
-        LOGI("Rx queue is empty!\n");
+        LOGI("Rx Queue is empty!\n");
     }
 
-    LOGI("Press any key to exit ...\n");
+    LOGI("Press enter to exit ...\n");
     getchar();
 
     return 0;

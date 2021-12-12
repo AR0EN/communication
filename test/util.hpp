@@ -2,6 +2,7 @@
 #define __UTIL_HPP__
 
 #include <cstdint>
+#include <chrono>
 #include <memory>
 
 inline bool compare(
@@ -17,6 +18,10 @@ inline bool compare(
     }
 
     return true;
+}
+
+inline std::chrono::time_point<std::chrono::steady_clock> get_monotonic_clock() {
+    return std::chrono::steady_clock::now();
 }
 
 #endif // __UTIL_HPP__
