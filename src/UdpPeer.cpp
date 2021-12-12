@@ -75,7 +75,7 @@ bool UdpPeer::setDestination(const std::string& address, const uint16_t& port) {
         return false;
     }
 
-    std::lock_guard<std::mutex> lock(mPeerMutex);
+    std::lock_guard<std::mutex> lock(mTxMutex);
     mPeerAddress = address;
     mPeerPort = port;
 
@@ -106,8 +106,6 @@ ssize_t UdpPeer::lread(const std::unique_ptr<uint8_t[]>& pBuffer, const size_t& 
 }
 
 ssize_t UdpPeer::lwrite(const std::unique_ptr<uint8_t[]>& pData, const size_t& size) {
-    std::lock_guard<std::mutex> lock(mPeerMutex);
-
     // Destination address
     struct sockaddr_in peerAddr;
     peerAddr.sin_family      = AF_INET;

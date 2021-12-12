@@ -20,9 +20,6 @@ namespace comm {
 
 class TcpServer : public EndPoint {
  public:
-    bool checkRxPipe() override ;
-    bool checkTxPipe() override ;
-
     void stop();
 
     ~TcpServer();
@@ -30,6 +27,9 @@ class TcpServer : public EndPoint {
 
  protected:
     TcpServer(int localSocketFd);
+
+    bool checkRxPipe() override;
+    bool checkTxPipe() override;
 
     ssize_t lread(const std::unique_ptr<uint8_t[]>& pBuffer, const size_t& limit) override;
     ssize_t lwrite(const std::unique_ptr<uint8_t[]>& pData, const size_t& size) override;

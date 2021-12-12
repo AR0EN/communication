@@ -32,7 +32,7 @@ inline bool EndPoint::checkTxPipe() {
     return true;
 }
 
-inline bool EndPoint::consumeRx(std::vector<std::unique_ptr<Packet>>& pRxPackets) {
+inline bool EndPoint::recvAll(std::vector<std::unique_ptr<Packet>>& pRxPackets) {
     return mDecoder.dequeue(pRxPackets);
 }
 

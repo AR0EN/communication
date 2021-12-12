@@ -20,9 +20,6 @@ namespace comm {
 
 class TcpClient : public EndPoint {
  public:
-    bool checkRxPipe() override;
-    bool checkTxPipe() override;
-
     void stop();
 
     virtual ~TcpClient();
@@ -30,6 +27,9 @@ class TcpClient : public EndPoint {
 
  protected:
     TcpClient(const int& socketFd, const std::string serverAddr, uint16_t remotePort);
+
+    bool checkRxPipe() override;
+    bool checkTxPipe() override;
 
     ssize_t lread(const std::unique_ptr<uint8_t[]>& pBuffer, const size_t& limit) override;
     ssize_t lwrite(const std::unique_ptr<uint8_t[]>& pData, const size_t& size) override;

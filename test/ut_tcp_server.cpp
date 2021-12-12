@@ -52,7 +52,7 @@ int main(int argc, char ** argv) {
     getchar();
 
     std::vector<std::unique_ptr<comm::Packet>> pPackets;
-    if (pTcpServer->consumeRx(pPackets)) {
+    if (pTcpServer->recvAll(pPackets)) {
         if (test(pPackets)) {
             LOGI("-> Passed!\n");
         } else {

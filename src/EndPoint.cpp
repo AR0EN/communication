@@ -3,18 +3,14 @@
 namespace comm {
 
 bool EndPoint::proceedRx() {
-    ssize_t byteCount = 0;
+    std::lock_guard<std::mutex> lock(mRxMutex);
 
-    {
-        std::lock_guard<std::mutex> lock(mRxMutex);
-
-        if (!checkRxPipe()) {
-            LOGD("[%s][%d] Rx pipe is closed!\n", __func__, __LINE__);
-            return true;
-        }
-
-        byteCount = lread(mpRxBuffer, MAX_FRAME_SIZE);
+    if (!checkRxPipe()) {
+        LOGD("[%s][%d] Rx pipe is closed!\n", __func__, __LINE__);
+        return true;
     }
+
+    ssize_t byteCount = lread(mpRxBuffer, MAX_FRAME_SIZE);
 
     if (0 > byteCount) {
         LOGE("[%s][%d] Could not read from lower layer!\n", __func__, __LINE__);
@@ -27,6 +23,8 @@ bool EndPoint::proceedRx() {
 }
 
 bool EndPoint::proceedTx() {
+    std::lock_guard<std::mutex> lock(mTxMutex);
+
     std::vector<std::unique_ptr<Packet>> pTxPackets;
     if (!mTxQueue.dequeue(pTxPackets) || (0 >= pTxPackets.size())) {
         // Tx queue is empty!
@@ -53,7 +51,6 @@ bool EndPoint::proceedTx() {
             continue;
         }
 
-        std::lock_guard<std::mutex> lock(mTxMutex);
         byteCount = lwrite(pEncodedData, encodedSize);
         if (0 > byteCount) {
             LOGE("[%s][%d] Could not write to lower layer!\n", __func__, __LINE__);

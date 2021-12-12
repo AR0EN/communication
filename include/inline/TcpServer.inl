@@ -17,12 +17,10 @@ inline TcpServer::~TcpServer() {
 }
 
 inline bool TcpServer::checkRxPipe() {
-    std::lock_guard<std::mutex> lock(mRemoteSocketMutex);
     return (0 <= mRemoteSocketFd);
 }
 
 inline bool TcpServer::checkTxPipe() {
-    std::lock_guard<std::mutex> lock(mRemoteSocketMutex);
     return (0 <= mRemoteSocketFd);
 }
 

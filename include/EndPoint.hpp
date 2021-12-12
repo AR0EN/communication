@@ -24,17 +24,16 @@ class EndPoint {
 
     bool send(std::unique_ptr<Packet>& pPacket);
     bool send(std::unique_ptr<Packet>&& pPacket);
+    bool recvAll(std::vector<std::unique_ptr<Packet>>& pRxPackets);
 
-    bool consumeRx(std::vector<std::unique_ptr<Packet>>& pRxPackets);
-
-    virtual bool checkRxPipe();
-    virtual bool checkTxPipe();
+    bool proceedRx();
+    bool proceedTx();
 
  protected:
     EndPoint() { mpRxBuffer.reset(new uint8_t[MAX_FRAME_SIZE]); }
 
-    bool proceedRx();
-    bool proceedTx();
+    virtual bool checkRxPipe();
+    virtual bool checkTxPipe();
 
     virtual ssize_t lread(const std::unique_ptr<uint8_t[]>&, const size_t&) = 0;
     virtual ssize_t lwrite(const std::unique_ptr<uint8_t[]>&, const size_t&) = 0;

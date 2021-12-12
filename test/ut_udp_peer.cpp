@@ -61,7 +61,7 @@ int main(int argc, char ** argv) {
     getchar();
 
     std::vector<std::unique_ptr<comm::Packet>> pPackets;
-    if (pUdpPeer->consumeRx(pPackets)) {
+    if (pUdpPeer->recvAll(pPackets)) {
         if (test(pPackets)) {
             LOGI("-> Passed!\n");
         } else {
