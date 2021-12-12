@@ -39,8 +39,7 @@ class TcpServer : public EndPoint {
     void runTx();
 
     int mLocalSocketFd;
-    int mRemoteSocketFd;
-    std::mutex mRemoteSocketMutex;
+    std::atomic<int> mRemoteSocketFd;
 
     std::unique_ptr<std::thread> mpRxThread;
     std::unique_ptr<std::thread> mpTxThread;

@@ -17,6 +17,8 @@ bool EndPoint::proceedRx() {
         return false;
     } else if (0 < byteCount) {
         mDecoder.feed(mpRxBuffer, byteCount);
+    } else {
+        // Do nothing
     }
 
     return true;

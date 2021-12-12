@@ -83,7 +83,6 @@ ssize_t TcpServer::lread(const std::unique_ptr<uint8_t[]>& pBuffer, const size_t
         if (EWOULDBLOCK == errno) {
             ret = 0;
         } else {
-            std::lock_guard<std::mutex> lock(mRemoteSocketMutex);
             mRemoteSocketFd = -1;
             perror("");
         }
@@ -102,7 +101,6 @@ ssize_t TcpServer::lwrite(const std::unique_ptr<uint8_t[]>& pData, const size_t&
 
         if (0 > ret) {
             if (EWOULDBLOCK != errno) {
-                std::lock_guard<std::mutex> lock(mRemoteSocketMutex);
                 mRemoteSocketFd = -1;
                 perror("");
                 break;
@@ -124,7 +122,6 @@ void TcpServer::runRx() {
 
     while(!mExitFlag) {
         {
-            std::lock_guard<std::mutex> lock(mRemoteSocketMutex);
             mRemoteSocketFd = accept(
                                     mLocalSocketFd,
                                     reinterpret_cast<struct sockaddr*>(&remoteSocketAddr),
@@ -150,7 +147,6 @@ void TcpServer::runRx() {
         }
 
         {
-            std::lock_guard<std::mutex> lock(mRemoteSocketMutex);
             close(mRemoteSocketFd);
             mRemoteSocketFd = -1;
         }
@@ -161,7 +157,7 @@ void TcpServer::runTx() {
     while(!mExitFlag) {
         if (!proceedTx()) {
             LOGE("[%s][%d]\n", __func__, __LINE__);
-            break;
+
         }
     }
 }
