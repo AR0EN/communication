@@ -14,12 +14,13 @@
 namespace comm {
 
 bool encode(
-    const std::unique_ptr<uint8_t[]>& pData, const size_t& size,
+    const std::unique_ptr<uint8_t[]>& pData, const size_t& size, const uint16_t& tid,
     std::unique_ptr<uint8_t[]>& pEncodedData, size_t& encodedSize
 );
 
 enum DECODING_STATES {
     E_SF,
+    E_TID,
     E_SIZE,
     E_PAYLOAD,
     E_VALIDATION
@@ -27,7 +28,7 @@ enum DECODING_STATES {
 
 class Decoder {
  public:
-    Decoder(): mState(E_SF) {}
+    Decoder(): mState(E_SF), mCachedTransactionId(-1) {}
     virtual ~Decoder() { resetBuffer(); }
 
     void feed(const std::unique_ptr<uint8_t[]>& pdata, const size_t& size);
@@ -43,6 +44,8 @@ class Decoder {
     std::unique_ptr<uint8_t[]> mpPayload;
 
     dstruct::SyncQueue<Packet> mDecodedQueue;
+    int mTransactionId;
+    int mCachedTransactionId;
 };  // class Decoder
 
 }   // namespace comm

@@ -8,6 +8,7 @@
 #include "util.hpp"
 
 bool test(const std::unique_ptr<uint8_t[]>& pdata, const size_t& size, const size_t& max_chunk_size = 128) {
+    static uint16_t tid = 0;
     bool result;
 
     comm::Decoder decoder;
@@ -16,7 +17,7 @@ bool test(const std::unique_ptr<uint8_t[]>& pdata, const size_t& size, const siz
     std::unique_ptr<uint8_t[]> pencoded_data;
     size_t encoded_size;
 
-    result = comm::encode(pdata, size, pencoded_data, encoded_size);
+    result = comm::encode(pdata, size, tid++, pencoded_data, encoded_size);
     LOGI("  * Step 1: encoded %lu bytes to %lu bytes\n",
         static_cast<uint64_t>(size), static_cast<uint64_t>(encoded_size)
     );

@@ -119,7 +119,7 @@ ssize_t UdpPeer::lread(const std::unique_ptr<uint8_t[]>& pBuffer, const size_t& 
         } else {
             perror("");
         }
-    } else {
+    } else if (0 < ret) {
         LOGD("[%s][%d] Received %ld bytes\n", __func__, __LINE__, ret);
     }
 

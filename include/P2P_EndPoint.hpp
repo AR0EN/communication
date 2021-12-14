@@ -32,6 +32,7 @@ class P2P_EndPoint {
  protected:
     P2P_EndPoint() {
         mpRxBuffer.reset(new uint8_t[MAX_FRAME_SIZE]);
+        mTransactionId = 0;
     }
 
     bool proceedRx();
@@ -43,8 +44,11 @@ class P2P_EndPoint {
  private:
     std::unique_ptr<uint8_t[]> mpRxBuffer;
     Decoder mDecoder;
+    std::mutex mRxMutex;
 
     dstruct::SyncQueue<Packet> mTxQueue;
+    uint16_t mTransactionId;
+    std::mutex mTxMutex;
 };  // class P2P_EndPoint
 
 }   // namespace comm
