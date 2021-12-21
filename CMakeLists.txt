@@ -27,7 +27,7 @@ add_library(
 )
 
 # add `-DBUILD_TESTS=ON` to compile unit tests
-OPTION(BUILD_TESTS "Enable unit tests" ON) # Disabled by default
+OPTION(BUILD_TESTS "Enable unit tests" ON) # Enabled by default
 
 # add `-DUSE_RAW_POINTER=ON` to enable debug log
 OPTION(USE_RAW_POINTER "Switch to Raw Pointers" OFF) # Disabled by default
