@@ -5,14 +5,14 @@ namespace dstruct {
 template <class T>
 inline void SyncQueue<T>::enqueue(std::unique_ptr<T>& pItem) {
     std::lock_guard<std::mutex> lock(mMutex);
-    mQueue.push(std::move(pItem));
+    mQueue.push_front(std::move(pItem));
     mCv.notify_one();
 }
 
 template <class T>
 inline void SyncQueue<T>::enqueue(std::unique_ptr<T>&& pItem) {
     std::lock_guard<std::mutex> lock(mMutex);
-    mQueue.push(std::move(pItem));
+    mQueue.push_front(std::move(pItem));
     mCv.notify_one();
 }
 
@@ -28,8 +28,8 @@ inline bool SyncQueue<T>::dequeue(std::vector<std::unique_ptr<T>>& items) {
     result = !mQueue.empty();
 
     while (!mQueue.empty()) {
-        items.push_back(std::move(mQueue.front()));
-        mQueue.pop();
+        items.push_back(std::move(mQueue.back()));
+        mQueue.pop_back();
     }
 
     return result;

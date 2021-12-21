@@ -5,7 +5,7 @@
 #include <chrono>
 #include <condition_variable>
 #include <mutex>
-#include <queue>
+#include <deque>
 #include <vector>
 
 namespace dstruct {
@@ -23,7 +23,7 @@ class SyncQueue {
     void setTimeoutMs(int timeoutMs);
 
  private:
-    std::queue<std::unique_ptr<T>> mQueue;
+    std::deque<std::unique_ptr<T>> mQueue;
     std::mutex mMutex;
     std::condition_variable mCv;
     std::atomic<int> mTimeoutMs;
