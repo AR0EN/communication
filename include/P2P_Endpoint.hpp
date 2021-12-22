@@ -19,18 +19,19 @@ namespace comm {
 static constexpr time_t RX_TIMEOUT_S = 1LL;
 static constexpr int TX_RETRY_COUNT = 3;
 
-class P2P_EndPoint {
+class P2P_Endpoint {
  public:
-    virtual ~P2P_EndPoint() {}
+    virtual ~P2P_Endpoint() {}
 
     bool send(std::unique_ptr<Packet>& pPacket);
     bool send(std::unique_ptr<Packet>&& pPacket);
     bool recvAll(std::deque<std::unique_ptr<Packet>>& pRxPackets, bool wait=true);
+    virtual bool isPeerConnected();
 
     virtual void close() = 0;
 
  protected:
-    P2P_EndPoint() {
+    P2P_Endpoint() {
         mpRxBuffer.reset(new uint8_t[MAX_FRAME_SIZE]);
         mTransactionId = 0;
     }
@@ -49,10 +50,10 @@ class P2P_EndPoint {
     dstruct::SyncQueue<Packet> mTxQueue;
     uint16_t mTransactionId;
     std::mutex mTxMutex;
-};  // class P2P_EndPoint
+};  // class P2P_Endpoint
 
 }   // namespace comm
 
-#include "inline/P2P_EndPoint.inl"
+#include "inline/P2P_Endpoint.inl"
 
 #endif // __P2P_ENPOINT_HPP__

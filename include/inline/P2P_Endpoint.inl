@@ -1,8 +1,8 @@
-#include "P2P_EndPoint.hpp"
+#include "P2P_Endpoint.hpp"
 
 namespace comm {
 
-inline bool P2P_EndPoint::send(std::unique_ptr<Packet>& pPacket) {
+inline bool P2P_Endpoint::send(std::unique_ptr<Packet>& pPacket) {
     if (pPacket) {
         if (!mTxQueue.enqueue(pPacket)) {
             LOGE("Tx Queue is full!\n");
@@ -14,7 +14,7 @@ inline bool P2P_EndPoint::send(std::unique_ptr<Packet>& pPacket) {
     }
 }
 
-inline bool P2P_EndPoint::send(std::unique_ptr<Packet>&& pPacket) {
+inline bool P2P_Endpoint::send(std::unique_ptr<Packet>&& pPacket) {
     if (pPacket) {
         if (!mTxQueue.enqueue(pPacket)) {
             LOGE("Tx Queue is full!\n");
@@ -26,8 +26,12 @@ inline bool P2P_EndPoint::send(std::unique_ptr<Packet>&& pPacket) {
     }
 }
 
-inline bool P2P_EndPoint::recvAll(std::deque<std::unique_ptr<Packet>>& pRxPackets, bool wait) {
+inline bool P2P_Endpoint::recvAll(std::deque<std::unique_ptr<Packet>>& pRxPackets, bool wait) {
     return mDecoder.dequeue(pRxPackets, wait);
+}
+
+inline bool P2P_Endpoint::isPeerConnected() {
+    return true;
 }
 
 }   // namespace comm
