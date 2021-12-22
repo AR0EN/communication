@@ -55,7 +55,7 @@ int main(int argc, char ** argv) {
     getchar();
 
     for (size_t i = 0; i < vectors.size(); i++) {
-        LOGI("[%lld (us)] Sent packet %zu (%zu bytes)\n", 
+        LOGI("[%lld (us)] Sending packet %zu (%zu bytes) ...\n", 
             static_cast<long long int>(get_elapsed_realtime_us()),
             i, vectors_sizes[i]
         );
