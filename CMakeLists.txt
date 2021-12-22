@@ -33,7 +33,7 @@ include_directories(include)
 
 add_library(
     comm STATIC
-    src/P2P_EndPoint.cpp
+    src/P2P_Endpoint.cpp
     src/TcpClient.cpp
     src/TcpServer.cpp
     src/UdpPeer.cpp

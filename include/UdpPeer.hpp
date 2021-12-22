@@ -12,12 +12,12 @@
 #include <thread>
 
 #include "common.hpp"
-#include "P2P_EndPoint.hpp"
+#include "P2P_Endpoint.hpp"
 #include "Packet.hpp"
 
 namespace comm {
 
-class UdpPeer : public P2P_EndPoint {
+class UdpPeer : public P2P_Endpoint {
  public:
     bool setDestination(const std::string& address, const uint16_t& port);
 
