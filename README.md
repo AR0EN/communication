@@ -38,7 +38,7 @@ udpPeer.send(comm::Packet::create(<buffer address>, <buffer size>));
 ...
 
 // Check Rx queue
-std::vector<std::unique_ptr<comm::Packet>> pPackets;
+std::deque<std::unique_ptr<comm::Packet>> pPackets;
 if (udpPeer.recvAll(pPackets)) {
     for (auto& pPacket : pPackets) {
         // do something
@@ -62,7 +62,7 @@ pTcpServer->send(comm::Packet::create(<buffer address>, <buffer size>));
 ...
 
 // Check Rx queue
-std::vector<std::unique_ptr<comm::Packet>> pPackets;
+std::deque<std::unique_ptr<comm::Packet>> pPackets;
 if (pTcpServer->recvAll(pPackets)) {
     for (auto& pPacket : pPackets) {
         // do something
@@ -88,7 +88,7 @@ pTcpClient->send(comm::Packet::create(<buffer address>, <buffer size>));
 ...
 
 // Check Rx queue
-std::vector<std::unique_ptr<comm::Packet>> pPackets;
+std::deque<std::unique_ptr<comm::Packet>> pPackets;
 if (pTcpClient->recvAll(pPackets)) {
     for (auto& pPacket : pPackets) {
         // do something

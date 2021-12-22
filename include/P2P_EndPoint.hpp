@@ -6,9 +6,9 @@
 #include <unistd.h>
 
 #include <atomic>
+#include <deque>
 #include <memory>
 #include <mutex>
-#include <vector>
 
 #include "Encoder.hpp"
 #include "Packet.hpp"
@@ -25,7 +25,7 @@ class P2P_EndPoint {
 
     bool send(std::unique_ptr<Packet>& pPacket);
     bool send(std::unique_ptr<Packet>&& pPacket);
-    bool recvAll(std::vector<std::unique_ptr<Packet>>& pRxPackets);
+    bool recvAll(std::deque<std::unique_ptr<Packet>>& pRxPackets, bool wait=true);
 
     virtual void close() = 0;
 

@@ -15,6 +15,24 @@
 #define LOGD(...)
 #endif
 
+#ifdef PROFILING
+// #warning "`std::chrono::system_clock` will be used as timestamp clock source"
+inline std::chrono::time_point<std::chrono::system_clock> get_monotonic_clock() {
+    return std::chrono::system_clock::now();
+}
+#else   // PROFILING
+// #warning "`std::chrono::steady_clock` will be used as timestamp clock source"
+inline std::chrono::time_point<std::chrono::steady_clock> get_monotonic_clock() {
+    return std::chrono::steady_clock::now();
+}
+#endif  // PROFILING
+
+inline int64_t get_elapsed_realtime_us() {
+    return std::chrono::duration_cast<std::chrono::microseconds>(
+                get_monotonic_clock().time_since_epoch()
+            ).count();
+}
+
 namespace comm{
 
 // Frame Structure
@@ -35,11 +53,6 @@ constexpr size_t MAX_FRAME_SIZE        = SF_SIZE + SIZE_OF_PAYLOAD_SIZE + MAX_PA
 
 inline bool validate_payload_size(const size_t& payload_size) {
     return (MAX_PAYLOAD_SIZE >= (SF_SIZE + SIZE_OF_PAYLOAD_SIZE + SIZE_OF_TID + payload_size + EF_SIZE));
-}
-
-inline int64_t get_monotonic_us() {
-    return std::chrono::duration_cast<std::chrono::microseconds>(
-        std::chrono::steady_clock::now().time_since_epoch()).count();
 }
 
 }; // namespace comm

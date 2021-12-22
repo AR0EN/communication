@@ -64,8 +64,8 @@ inline void comm::Decoder::feed(const std::unique_ptr<uint8_t[]>& pdata, const s
     }
 }
 
-inline bool comm::Decoder::dequeue(std::vector<std::unique_ptr<Packet>>& pPackets) {
-    return mDecodedQueue.dequeue(pPackets);
+inline bool comm::Decoder::dequeue(std::deque<std::unique_ptr<Packet>>& pPackets, bool wait) {
+    return mDecodedQueue.dequeue(pPackets, wait);
 }
 
 inline void comm::Decoder::proceed(const uint8_t& b) {
@@ -75,7 +75,7 @@ inline void comm::Decoder::proceed(const uint8_t& b) {
         case E_SF:
             if (SF == b) {
                 resetBuffer();
-                timestampUs = get_monotonic_us();
+                timestampUs = get_elapsed_realtime_us();
                 mState = E_TID;
             } else {
                 // Discard
@@ -174,9 +174,10 @@ inline void comm::Decoder::proceed(const uint8_t& b) {
         {
             if (EF == b) {
                 // Save the frame
-                std::unique_ptr<Packet> pPacket = Packet::create(mpPayload, mPayloadSize, timestampUs);
-                mDecodedQueue.enqueue(pPacket);
-                // mDecodedQueue.enqueue(Packet::create(mpPayload, mPayloadSize, timestampUs));
+                if (!mDecodedQueue.enqueue(Packet::create(mpPayload, mPayloadSize, timestampUs))) {
+                    LOGE("Decoder Queue is full!\n");
+                }
+
                 LOGD("[%s][%d] Decoded a packet with %lu bytes payload at %ld (us)!\n",
                     __func__, __LINE__, mPayloadSize, timestampUs
                 );

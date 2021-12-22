@@ -22,7 +22,7 @@ bool P2P_EndPoint::proceedRx() {
 bool P2P_EndPoint::proceedTx() {
     std::lock_guard<std::mutex> lock(mTxMutex);
 
-    std::vector<std::unique_ptr<Packet>> pTxPackets;
+    std::deque<std::unique_ptr<Packet>> pTxPackets;
     if (!mTxQueue.dequeue(pTxPackets) || (0 >= pTxPackets.size())) {
         // Tx queue is empty!
         return true;
@@ -33,6 +33,7 @@ bool P2P_EndPoint::proceedTx() {
     std::unique_ptr<uint8_t[]> pEncodedData;
     size_t encodedSize;
     ssize_t byteCount;
+
     for (auto& pPacket : pTxPackets) {
         encode(pPacket->getPayload(), pPacket->getPayloadSize(), mTransactionId++,
             pEncodedData, encodedSize

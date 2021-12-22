@@ -1,37 +1,13 @@
 #include <cstring>
-#include <vector>
+#include <deque>
 
+#include "common.hpp"
 #include "Encoder.hpp"
 #include "Packet.hpp"
 #include "TcpClient.hpp"
 
 #include "test_vectors.hpp"
 #include "util.hpp"
-
-bool test(const std::vector<std::unique_ptr<comm::Packet>>& pRxPackets) {
-    int i = 0;
-    for (auto& pPacket : pRxPackets) {
-        size_t packet_size = pPacket->getPayloadSize();
-        LOGI("Packet %d (%lu bytes)\n", i, static_cast<uint64_t>(packet_size));
-        if (vectors_sizes[i] == packet_size) {
-            std::unique_ptr<uint8_t[]> pTestData (new uint8_t[vectors_sizes[i]]);
-            memcpy(pTestData.get(), vectors[i], vectors_sizes[i]);
-            if (compare(pTestData, pPacket->getPayload(), vectors_sizes[i])) {
-                LOGI("  -> Matched!\n");
-            } else {
-                LOGI("  -> Data is not matched!\n");
-                return false;
-            }
-        } else {
-            LOGI("  -> Packet length is not matched (expected: %lu bytes)!\n", vectors_sizes[i]);
-            return false;
-        }
-
-        i++;
-    }
-
-    return true;
-}
 
 int main(int argc, char ** argv) {
     if (3 > argc) {
@@ -51,6 +27,10 @@ int main(int argc, char ** argv) {
     LOGI("Connected to (%s/%s)!\n", argv[1], argv[2]);
 
     for (size_t i = 0; i < vectors.size(); i++) {
+        LOGI("[%lld (us)] Sending packet %zu (%zu bytes) ...\n", 
+            static_cast<long long int>(get_elapsed_realtime_us()),
+            i, vectors_sizes[i]
+        );
 #ifdef USE_RAW_POINTER
         pTcpClient->send(comm::Packet::create(vectors[i], vectors_sizes[i]));
 #else
@@ -63,7 +43,7 @@ int main(int argc, char ** argv) {
     LOGI("Sent %lu packets to server, press enter to check Rx Queue ...\n", vectors.size());
     getchar();
 
-    std::vector<std::unique_ptr<comm::Packet>> pPackets;
+    std::deque<std::unique_ptr<comm::Packet>> pPackets;
     if (pTcpClient->recvAll(pPackets)) {
         if (test(pPackets)) {
             LOGI("-> Passed!\n");

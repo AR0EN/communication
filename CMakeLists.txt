@@ -12,8 +12,21 @@ message("")
 add_definitions(-DDEBUG)
 add_compile_options(-g)
 ELSE()
+message("* Note: pass `-DDEFINE_DEBUG=ON` to enable debug log!")
+message("")
 add_compile_options(-O3)
 ENDIF (DEFINE_DEBUG)
+
+# add `-DDEFINE_PROFILING=ON` to enable profiling
+OPTION(DEFINE_PROFILING "Enable profiling" OFF) # Disabled by default
+IF (DEFINE_PROFILING)
+message("* Note: Profiling is enabled!")
+message("")
+add_definitions(-DPROFILING)
+ELSE()
+message("* Note: pass `-DDEFINE_PROFILING=ON` to enable profiling!")
+message("")
+ENDIF (DEFINE_PROFILING)
 
 add_compile_options(-Wall)
 include_directories(include)
@@ -30,18 +43,18 @@ add_library(
 OPTION(BUILD_TESTS "Enable unit tests" ON) # Enabled by default
 
 # add `-DUSE_RAW_POINTER=ON` to enable debug log
-OPTION(USE_RAW_POINTER "Switch to Raw Pointers" OFF) # Disabled by default
+OPTION(DEFINE_USE_RAW_POINTER "Switch to Raw Pointers" OFF) # Disabled by default
 
 IF (BUILD_TESTS)
 message("* Note: Tests will be compiled!")
 message("")
 
-IF (USE_RAW_POINTER)
+IF (DEFINE_USE_RAW_POINTER)
 message("* Note: Tests will use Raw Pointers!")
 message("")
 add_definitions(-DUSE_RAW_POINTER)
 
-ENDIF (USE_RAW_POINTER)
+ENDIF (DEFINE_USE_RAW_POINTER)
 
 include_directories(test)
 
@@ -81,5 +94,7 @@ add_executable(
 )
 
 target_link_libraries(ut-tcp-server comm test-vectors pthread)
-
+ELSE()
+message("* Note: pass `-DBUILD_TESTS=ON` to compile unit tests!")
+message("")
 ENDIF (BUILD_TESTS)
