@@ -4,8 +4,8 @@
 #include <cstdint>
 
 #include <cstring>
+#include <deque>
 #include <memory>
-#include <vector>
 
 #include "common.hpp"
 #include "Packet.hpp"
@@ -32,7 +32,7 @@ class Decoder {
     virtual ~Decoder() { resetBuffer(); }
 
     void feed(const std::unique_ptr<uint8_t[]>& pdata, const size_t& size);
-    bool dequeue(std::vector<std::unique_ptr<Packet>>& pPackets);
+    bool dequeue(std::deque<std::unique_ptr<Packet>>& pPackets, bool wait=true);
 
  private:
     void proceed(const uint8_t& b);

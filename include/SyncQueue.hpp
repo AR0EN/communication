@@ -4,9 +4,8 @@
 #include <atomic>
 #include <chrono>
 #include <condition_variable>
-#include <mutex>
 #include <deque>
-#include <vector>
+#include <mutex>
 
 namespace dstruct {
 
@@ -18,7 +17,7 @@ class SyncQueue {
 
     void enqueue(std::unique_ptr<T>& pItem);
     void enqueue(std::unique_ptr<T>&& pItem);
-    bool dequeue(std::vector<std::unique_ptr<T>>& items);
+    bool dequeue(std::deque<std::unique_ptr<T>>& items, bool wait=true);
 
     void setTimeoutMs(int timeoutMs);
 

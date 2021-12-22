@@ -22,8 +22,8 @@ inline bool P2P_EndPoint::send(std::unique_ptr<Packet>&& pPacket) {
     }
 }
 
-inline bool P2P_EndPoint::recvAll(std::vector<std::unique_ptr<Packet>>& pRxPackets) {
-    return mDecoder.dequeue(pRxPackets);
+inline bool P2P_EndPoint::recvAll(std::deque<std::unique_ptr<Packet>>& pRxPackets, bool wait) {
+    return mDecoder.dequeue(pRxPackets, wait);
 }
 
 }   // namespace comm

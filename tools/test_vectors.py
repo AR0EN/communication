@@ -55,12 +55,6 @@ with open(VECTOR_HEADER, 'w') as fw:
     fw.write('#include <cstdint>\n\n')
     fw.write('#include <vector>\n\n')
 
-    fw.write('#ifdef USE_RAW_POINTER\n')
-    fw.write('#warning "Tests will use Raw Pointers"\n')
-    fw.write('#else\n')
-    fw.write('#warning "Tests will use Smart Pointers"\n')
-    fw.write('#endif\n\n')
-
     fw.write('extern std::vector<const uint8_t *> vectors;\n')
     fw.write('extern std::vector<size_t> vectors_sizes;\n\n')
 

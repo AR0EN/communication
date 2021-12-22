@@ -5,31 +5,43 @@ namespace dstruct {
 template <class T>
 inline void SyncQueue<T>::enqueue(std::unique_ptr<T>& pItem) {
     std::lock_guard<std::mutex> lock(mMutex);
-    mQueue.push_front(std::move(pItem));
+    mQueue.push_back(std::move(pItem));
     mCv.notify_one();
 }
 
 template <class T>
 inline void SyncQueue<T>::enqueue(std::unique_ptr<T>&& pItem) {
     std::lock_guard<std::mutex> lock(mMutex);
-    mQueue.push_front(std::move(pItem));
+    mQueue.push_back(std::move(pItem));
     mCv.notify_one();
 }
 
 template <class T>
-inline bool SyncQueue<T>::dequeue(std::vector<std::unique_ptr<T>>& items) {
-    bool result = false;
-    std::unique_lock<std::mutex> lock(mMutex);
+inline bool SyncQueue<T>::dequeue(std::deque<std::unique_ptr<T>>& items, bool wait) {
+    bool result;
 
-    if (mQueue.empty()) {
-        mCv.wait_for(lock, std::chrono::milliseconds(mTimeoutMs));
-    }
+    if (wait) {
+        std::unique_lock<std::mutex> lock(mMutex);
 
-    result = !mQueue.empty();
+        if (mQueue.empty()) {
+            mCv.wait_for(lock, std::chrono::milliseconds(mTimeoutMs));
+        }
 
-    while (!mQueue.empty()) {
-        items.push_back(std::move(mQueue.back()));
-        mQueue.pop_back();
+        result = !mQueue.empty();
+
+        while (!mQueue.empty()) {
+            items.push_back(std::move(mQueue.front()));
+            mQueue.pop_front();
+        }
+    } else {
+        std::lock_guard<std::mutex> lock(mMutex);
+
+        result = !mQueue.empty();
+
+        while (!mQueue.empty()) {
+            items.push_back(std::move(mQueue.front()));
+            mQueue.pop_front();
+        }
     }
 
     return result;

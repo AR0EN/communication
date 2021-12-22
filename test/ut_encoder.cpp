@@ -1,5 +1,5 @@
 #include <cstring>
-#include <vector>
+#include <deque>
 
 #include "Encoder.hpp"
 #include "Packet.hpp"
@@ -45,9 +45,9 @@ bool test(const std::unique_ptr<uint8_t[]>& pdata, const size_t& size, const siz
         internal_pointer += chunk_size;
     }
 
-    std::vector<std::unique_ptr<comm::Packet>> decoded_packets;
-    if (decoder.dequeue(decoded_packets)) {
-        for (auto& ppacket : decoded_packets) {
+    std::deque<std::unique_ptr<comm::Packet>> pdecoded_packets;
+    if (decoder.dequeue(pdecoded_packets)) {
+        for (auto& ppacket : pdecoded_packets) {
             result &= size == ppacket->getPayloadSize();
             if (result) {
                 result &= compare(ppacket->getPayload(), pdata, size);

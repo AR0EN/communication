@@ -29,7 +29,7 @@ inline Packet::Packet(
     const size_t& payloadSize,
     const int64_t& timestampUs) {
 
-    mTimestampUs = get_monotonic_us();
+    mTimestampUs = get_elapsed_realtime_us();
     mPayloadSize = payloadSize;
     mpPayload.reset(new uint8_t[mPayloadSize]);
     memcpy(mpPayload.get(), pPayload.get(), mPayloadSize);
@@ -57,7 +57,7 @@ inline Packet::Packet(
     const size_t& payloadSize,
     const int64_t& timestampUs) {
 
-    mTimestampUs = get_monotonic_us();
+    mTimestampUs = get_elapsed_realtime_us();
     mPayloadSize = payloadSize;
     mpPayload.reset(new uint8_t[mPayloadSize]);
     memcpy(mpPayload.get(), pPayload, mPayloadSize);
