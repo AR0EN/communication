@@ -3,17 +3,31 @@
 namespace dstruct {
 
 template <class T>
-inline void SyncQueue<T>::enqueue(std::unique_ptr<T>& pItem) {
+inline bool SyncQueue<T>::enqueue(std::unique_ptr<T>& pItem) {
+    bool result;
+
     std::lock_guard<std::mutex> lock(mMutex);
-    mQueue.push_back(std::move(pItem));
+    result = mCapLimit > mQueue.size();
+    if (result) {
+        mQueue.push_back(std::move(pItem));
+    }
     mCv.notify_one();
+
+    return result;
 }
 
 template <class T>
-inline void SyncQueue<T>::enqueue(std::unique_ptr<T>&& pItem) {
+inline bool SyncQueue<T>::enqueue(std::unique_ptr<T>&& pItem) {
+    bool result;
+
     std::lock_guard<std::mutex> lock(mMutex);
-    mQueue.push_back(std::move(pItem));
+    result = mCapLimit > mQueue.size();
+    if (result) {
+        mQueue.push_back(std::move(pItem));
+    }
     mCv.notify_one();
+
+    return result;
 }
 
 template <class T>
@@ -50,6 +64,11 @@ inline bool SyncQueue<T>::dequeue(std::deque<std::unique_ptr<T>>& items, bool wa
 template <class T>
 inline void SyncQueue<T>::setTimeoutMs(int timeoutMs) {
     mTimeoutMs = timeoutMs;
+}
+
+template <class T>
+inline void SyncQueue<T>::setCapLimit(size_t capLimit) {
+    mCapLimit = capLimit;
 }
 
 }   // namespace dstruct

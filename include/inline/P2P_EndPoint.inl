@@ -4,7 +4,9 @@ namespace comm {
 
 inline bool P2P_EndPoint::send(std::unique_ptr<Packet>& pPacket) {
     if (pPacket) {
-        mTxQueue.enqueue(pPacket);
+        if (!mTxQueue.enqueue(pPacket)) {
+            LOGE("Tx Queue is full!\n");
+        }
         return true;
     } else {
         LOGE("[%s][%d] Tx packet must not be empty!\n", __func__, __LINE__);
@@ -14,7 +16,9 @@ inline bool P2P_EndPoint::send(std::unique_ptr<Packet>& pPacket) {
 
 inline bool P2P_EndPoint::send(std::unique_ptr<Packet>&& pPacket) {
     if (pPacket) {
-        mTxQueue.enqueue(pPacket);
+        if (!mTxQueue.enqueue(pPacket)) {
+            LOGE("Tx Queue is full!\n");
+        }
         return true;
     } else {
         LOGE("[%s][%d] Tx packet must not be empty!\n", __func__, __LINE__);

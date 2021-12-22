@@ -1,8 +1,6 @@
 #include <cstring>
 
-#include <chrono>
 #include <deque>
-#include <thread>
 
 #include "common.hpp"
 #include "Encoder.hpp"

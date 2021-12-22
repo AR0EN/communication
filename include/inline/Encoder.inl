@@ -174,9 +174,10 @@ inline void comm::Decoder::proceed(const uint8_t& b) {
         {
             if (EF == b) {
                 // Save the frame
-                std::unique_ptr<Packet> pPacket = Packet::create(mpPayload, mPayloadSize, timestampUs);
-                mDecodedQueue.enqueue(pPacket);
-                // mDecodedQueue.enqueue(Packet::create(mpPayload, mPayloadSize, timestampUs));
+                if (!mDecodedQueue.enqueue(Packet::create(mpPayload, mPayloadSize, timestampUs))) {
+                    LOGE("Decoder Queue is full!\n");
+                }
+
                 LOGD("[%s][%d] Decoded a packet with %lu bytes payload at %ld (us)!\n",
                     __func__, __LINE__, mPayloadSize, timestampUs
                 );
