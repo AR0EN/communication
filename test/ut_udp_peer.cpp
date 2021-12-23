@@ -10,22 +10,37 @@
 #include "test_vectors.hpp"
 #include "util.hpp"
 
+#define EP_NAME "UdpPeer"
+
 int main(int argc, char ** argv) {
     if (4 > argc) {
         LOGI("Usage: %s <Local Port> <Peer Address> <Peer Port>\n", argv[0]);
         return 1;
     }
 
-    std::unique_ptr<comm::UdpPeer> pUdpPeer = comm::UdpPeer::create(
+    std::unique_ptr<comm::P2P_Endpoint> pEndpoint = comm::UdpPeer::create(
         static_cast<uint16_t>(atoi(argv[1])), argv[2], static_cast<uint16_t>(atoi(argv[3]))
     );
 
-    if (!pUdpPeer) {
-        LOGI("Could not create UdpPeer which listens at port %s!\n", argv[1]);
+    if (!pEndpoint) {
+        LOGE("Could not create %s which listens at port %s!\n", EP_NAME, argv[1]);
         return 1;
     }
 
-    LOGI("Press enter to send data to %s/%u ...\n", argv[2], static_cast<uint16_t>(atoi(argv[3])));
+    LOGI("%s is ready, waiting for peer ...\n", EP_NAME);
+
+    auto t0 = get_monotonic_clock();
+    while (!pEndpoint->isPeerConnected()) {
+        if (
+            std::chrono::seconds(10) <
+            std::chrono::duration_cast<std::chrono::seconds>(get_monotonic_clock() - t0)
+        ) {
+            LOGE("Timeout!\n");
+            return 1;
+        }
+    }
+
+    LOGI("Connected to peer, press enter to sent data to peer ...\n");
     getchar();
 
     for (size_t i = 0; i < vectors.size(); i++) {
@@ -34,11 +49,11 @@ int main(int argc, char ** argv) {
             i, vectors_sizes[i]
         );
 #ifdef USE_RAW_POINTER
-        pUdpPeer->send(comm::Packet::create(vectors[i], vectors_sizes[i]));
+        pEndpoint->send(comm::Packet::create(vectors[i], vectors_sizes[i]));
 #else
         std::unique_ptr<uint8_t[]> pdata(new uint8_t[vectors_sizes[i]]);
         memcpy(pdata.get(), vectors[i], vectors_sizes[i]);
-        pUdpPeer->send(comm::Packet::create(pdata, vectors_sizes[i]));
+        pEndpoint->send(comm::Packet::create(pdata, vectors_sizes[i]));
 #endif  // USE_RAW_POINTER
     }
 
@@ -46,14 +61,14 @@ int main(int argc, char ** argv) {
     getchar();
 
     std::deque<std::unique_ptr<comm::Packet>> pPackets;
-    if (pUdpPeer->recvAll(pPackets)) {
+    if (pEndpoint->recvAll(pPackets)) {
         if (test(pPackets)) {
             LOGI("-> Passed!\n");
         } else {
             LOGI("-> Failed!\n");
         }
     } else {
-        LOGI("Rx Queue is empty!\n");
+        LOGE("Rx Queue is empty!\n");
     }
 
     LOGI("Press enter to exit ...\n");

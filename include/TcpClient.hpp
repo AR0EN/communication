@@ -14,11 +14,11 @@
 
 #include "common.hpp"
 #include "Packet.hpp"
-#include "P2P_EndPoint.hpp"
+#include "P2P_Endpoint.hpp"
 
 namespace comm {
 
-class TcpClient : public P2P_EndPoint {
+class TcpClient : public P2P_Endpoint {
  public:
     void close() override;
 

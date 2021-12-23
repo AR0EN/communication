@@ -30,7 +30,8 @@ A lightweight library for Packet-based P2P Communication
 * `UdpPeer`
 ```
 // Construct an UdpPeer
-comm::UdpPeer udpPeer(<Local Port>, <Peer/Remote IP Address>, <Peer/Remote Port>);
+std::unique_ptr<comm::P2P_Endpoint> pEndpoint = 
+    comm::UdpPeer::create(<Local Port>, <Peer/Remote IP Address>, <Peer/Remote Port>);
 ...
 
 // Send a packet to Peer
@@ -50,11 +51,11 @@ if (udpPeer.recvAll(pPackets)) {
 * TCP Server
 ```
 // Construct a Tcp Server
-std::unique_ptr<comm::TcpServer> pTcpServer = comm::TcpServer::create(<Local Port>);
+std::unique_ptr<comm::P2P_Endpoint> pTcpServer = comm::TcpServer::create(<Local Port>);
 ...
 
 // Waiting for client
-while (!pTcpServer->isClientConnected()) {}
+while (!pTcpServer->isPeerConnected()) {}
 ...
 
 // Send a packet to Tcp Client
@@ -74,7 +75,7 @@ if (pTcpServer->recvAll(pPackets)) {
 * TCP Client
 ```
 // Construct a Tcp Client
-std::unique_ptr<comm::TcpClient> pTcpClient =
+std::unique_ptr<comm::P2P_Endpoint> pTcpClient =
     comm::TcpClient::create(<Server IP Address>, <Server Port>);
 
 if (!pTcpClient) {

@@ -13,19 +13,18 @@
 #include <thread>
 
 #include "common.hpp"
-#include "P2P_EndPoint.hpp"
+#include "P2P_Endpoint.hpp"
 #include "Packet.hpp"
 
 namespace comm {
 
-class TcpServer : public P2P_EndPoint {
+class TcpServer : public P2P_Endpoint {
  public:
+    bool isPeerConnected() override;
     void close() override;
 
     ~TcpServer();
     static std::unique_ptr<TcpServer> create(uint16_t localPort);
-
-    bool isClientConnected();
 
  protected:
     TcpServer(int localSocketFd);

@@ -18,7 +18,7 @@ inline TcpServer::~TcpServer() {
     LOGI("[%s][%d] Finalized!\n", __func__, __LINE__);
 }
 
-inline bool TcpServer::isClientConnected() {
+inline bool TcpServer::isPeerConnected() {
     return checkTxPipe();
 }
 

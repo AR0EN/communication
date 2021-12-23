@@ -1,8 +1,8 @@
-#include "P2P_EndPoint.hpp"
+#include "P2P_Endpoint.hpp"
 
 namespace comm {
 
-bool P2P_EndPoint::proceedRx() {
+bool P2P_Endpoint::proceedRx() {
     std::lock_guard<std::mutex> lock(mRxMutex);
 
     ssize_t byteCount = lread(mpRxBuffer, MAX_FRAME_SIZE);
