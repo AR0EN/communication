@@ -11,7 +11,7 @@
 #include <mutex>
 
 #ifdef __WIN32__
-#include <windows.h>
+#include <WinDef.h>
 #endif   // __WIN32__
 
 #include "Encoder.hpp"

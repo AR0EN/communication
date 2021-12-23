@@ -145,9 +145,8 @@ void TcpClient::runTx() {
 }
 
 ssize_t TcpClient::lread(const std::unique_ptr<uint8_t[]>& pBuffer, const size_t& limit) {
-    ssize_t ret = read(mSocketFd, pBuffer.get(), limit);
-
 #ifdef __WIN32__
+    ssize_t ret = recv(mSocketFd, reinterpret_cast<char *>(pBuffer.get()), limit, 0);
     if (SOCKET_ERROR == ret) {
         int error = WSAGetLastError();
         if (WSAEWOULDBLOCK == error) {
@@ -159,6 +158,7 @@ ssize_t TcpClient::lread(const std::unique_ptr<uint8_t[]>& pBuffer, const size_t
         LOGD("[%s][%d] Received %ld bytes\n", __func__, __LINE__, ret);
     }
 #else   // __WIN32__
+    ssize_t ret = read(mSocketFd, pBuffer.get(), limit);
     if (0 > ret) {
         if (EWOULDBLOCK == errno) {
             ret = 0;
@@ -177,9 +177,8 @@ ssize_t TcpClient::lwrite(const std::unique_ptr<uint8_t[]>& pData, const size_t&
     // Send data over TCP
     ssize_t ret = 0LL;
     for (int i = 0; i < TX_RETRY_COUNT; i++) {
-        ret = write(mSocketFd, pData.get(), size);
-
 #ifdef __WIN32__
+        ret = ::send(mSocketFd, reinterpret_cast<const char *>(pData.get()), size, 0);
         if (SOCKET_ERROR == ret) {
             int error = WSAGetLastError();
             if (WSAEWOULDBLOCK == error) {
@@ -192,6 +191,7 @@ ssize_t TcpClient::lwrite(const std::unique_ptr<uint8_t[]>& pData, const size_t&
             break;
         }
 #else   // __WIN32__
+        ret = write(mSocketFd, pData.get(), size);
         if (0 > ret) {
             if (EWOULDBLOCK == errno) {
                 // Ignore & retry

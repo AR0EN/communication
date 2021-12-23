@@ -21,6 +21,7 @@ std::unique_ptr<TcpServer> TcpServer::create(uint16_t localPort) {
         LOGE("WSAStartup() failed (error code: %d)!\n", ret);
         return tcpServer;
     }
+    LOGI("[%s][%d]\n", __func__, __LINE__);
 #endif  // __WIN32__
 
     SOCKET localSocketFd = socket(AF_INET, SOCK_STREAM, 0);
@@ -33,6 +34,7 @@ std::unique_ptr<TcpServer> TcpServer::create(uint16_t localPort) {
 #endif  // __WIN32__
         return tcpServer;
     }
+    LOGI("[%s][%d]\n", __func__, __LINE__);
 
 #ifdef __WIN32__
     BOOL enable = TRUE;
@@ -43,6 +45,7 @@ std::unique_ptr<TcpServer> TcpServer::create(uint16_t localPort) {
         WSACleanup();
         return tcpServer;
     }
+    LOGI("[%s][%d]\n", __func__, __LINE__);
 #else   // __WIN32__
     int enable = 1;
     ret = setsockopt(localSocketFd, SOL_SOCKET, SO_REUSEADDR, &enable, sizeof(int));
@@ -62,6 +65,7 @@ std::unique_ptr<TcpServer> TcpServer::create(uint16_t localPort) {
         WSACleanup();
         return tcpServer;
     }
+    LOGI("[%s][%d]\n", __func__, __LINE__);
 #else   // __WIN32__
     struct timeval timeout;
     timeout.tv_sec = RX_TIMEOUT_S;
@@ -86,6 +90,7 @@ std::unique_ptr<TcpServer> TcpServer::create(uint16_t localPort) {
         WSACleanup();
         return tcpServer;
     }
+    LOGI("[%s][%d]\n", __func__, __LINE__);
 #else   // __WIN32__
     ret = bind(localSocketFd, reinterpret_cast<const struct sockaddr *>(&localSocketAddr), sizeof(localSocketAddr));
     if (0 > ret) {
@@ -103,6 +108,7 @@ std::unique_ptr<TcpServer> TcpServer::create(uint16_t localPort) {
         WSACleanup();
         return tcpServer;
     }
+    LOGI("[%s][%d]\n", __func__, __LINE__);
 #else   // __WIN32__
     if (0 != ret) {
         perror("Failed to mark the socket as a passive socket!\n");
@@ -186,9 +192,8 @@ void TcpServer::runTx() {
 }
 
 ssize_t TcpServer::lread(const std::unique_ptr<uint8_t[]>& pBuffer, const size_t& limit) {
-    ssize_t ret = read(mRxPipeFd, pBuffer.get(), limit);
-
 #ifdef __WIN32__
+    ssize_t ret = recv(mRxPipeFd, reinterpret_cast<char *>(pBuffer.get()), limit, 0);
     if (SOCKET_ERROR == ret) {
         int error = WSAGetLastError();
         if (WSAEWOULDBLOCK == error) {
@@ -200,6 +205,7 @@ ssize_t TcpServer::lread(const std::unique_ptr<uint8_t[]>& pBuffer, const size_t
         LOGD("[%s][%d] Received %ld bytes\n", __func__, __LINE__, ret);
     }
 #else   // __WIN32__
+    ssize_t ret = read(mRxPipeFd, pBuffer.get(), limit);
     if (0 > ret) {
         if (EWOULDBLOCK == errno) {
             ret = 0;
@@ -218,9 +224,8 @@ ssize_t TcpServer::lwrite(const std::unique_ptr<uint8_t[]>& pData, const size_t&
     // Send data over TCP
     ssize_t ret = 0LL;
     for (int i = 0; i < TX_RETRY_COUNT; i++) {
-        ret = write(mTxPipeFd, pData.get(), size);
-
 #ifdef __WIN32__
+        ret = ::send(mTxPipeFd, reinterpret_cast<const char *>(pData.get()), size, 0);
         if (SOCKET_ERROR == ret) {
             int error = WSAGetLastError();
             if (WSAEWOULDBLOCK == error) {
@@ -235,6 +240,7 @@ ssize_t TcpServer::lwrite(const std::unique_ptr<uint8_t[]>& pData, const size_t&
             break;
         }
 #else   // __WIN32__
+        ret = write(mTxPipeFd, pData.get(), size);
         if (0 > ret) {
             if (EWOULDBLOCK == errno) {
                 // Ignore & retry
