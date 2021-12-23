@@ -171,8 +171,7 @@ void TcpServer::runRx() {
 
 #ifdef __WIN32__
         unsigned long non_blocking = 1;
-        ret = ioctlsocket(mRxPipeFd, FIONBIO, &non_blocking);
-        if (NO_ERROR != ret) {
+        if (NO_ERROR != ioctlsocket(mRxPipeFd, FIONBIO, &non_blocking)) {
             LOGE("Failed to enable NON-BLOCKING mode (error code: %d)\n", WSAGetLastError());
             closesocket(mRxPipeFd);
             WSACleanup();

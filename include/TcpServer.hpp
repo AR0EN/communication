@@ -62,7 +62,7 @@ class TcpServer : public P2P_Endpoint {
     // -> no need to use std::atomic for Rx Pipe
     SOCKET mRxPipeFd;
 #ifdef __WIN32__
-    std::atomic<unsigned> mTxPipeFd;
+    std::atomic<long long unsigned int> mTxPipeFd;
 #else // __WIN32__
     std::atomic<int> mTxPipeFd;
 #endif   // __WIN32__
