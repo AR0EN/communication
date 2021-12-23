@@ -37,7 +37,7 @@ class P2P_Endpoint {
     }
 
     bool proceedRx();
-    bool proceedTx();
+    bool proceedTx(bool discard=false);
 
     virtual ssize_t lread(const std::unique_ptr<uint8_t[]>&, const size_t&) = 0;
     virtual ssize_t lwrite(const std::unique_ptr<uint8_t[]>&, const size_t&) = 0;
