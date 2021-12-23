@@ -26,15 +26,18 @@ std::unique_ptr<UdpPeer> UdpPeer::create(
 #endif  // __WIN32__
 
     SOCKET socketFd = socket(AF_INET, SOCK_DGRAM, 0);
-    if (INVALID_SOCKET == socketFd) {
 #ifdef __WIN32__
+    if (INVALID_SOCKET == socketFd) {
         LOGE("socket() failed (error code: %d)!\n", WSAGetLastError());
         WSACleanup();
-#else   // __WIN32__
-        perror("Could not create UDP socket!\n");
-#endif  // __WIN32__
         return udpPeer;
     }
+#else   // __WIN32__
+    if (0 > socketFd) {
+        perror("Could not create UDP socket!\n");
+        return udpPeer;
+    }
+#endif  // __WIN32__
 
 #ifdef __WIN32__
     BOOL enable = TRUE;
@@ -56,21 +59,24 @@ std::unique_ptr<UdpPeer> UdpPeer::create(
 #endif  // __WIN32__
 
 #ifdef __WIN32__
-    DWORD timeout = RX_TIMEOUT_S * 1000;
-    ret = setsockopt (socketFd, SOL_SOCKET, SO_RCVTIMEO, reinterpret_cast<const char *>(&timeout), sizeof(timeout));
-    if (SOCKET_ERROR == ret) {
-        LOGE("Failed to configure SO_RCVTIMEO (error code: %d)\n", WSAGetLastError());
+    unsigned long non_blocking = 1;
+    ret = ioctlsocket(socketFd, FIONBIO, &non_blocking);
+    if (NO_ERROR != ret) {
+        LOGE("Failed to enable NON-BLOCKING mode (error code: %d)\n", WSAGetLastError());
         closesocket(socketFd);
         WSACleanup();
         return udpPeer;
     }
 #else   // __WIN32__
-    struct timeval timeout;
-    timeout.tv_sec = RX_TIMEOUT_S;
-    timeout.tv_usec = 0;
-    ret = setsockopt (socketFd, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout));
-    if (0 > ret) {
-        perror("Failed to configure SO_RCVTIMEO!\n");
+    int flags = fcntl(socketFd, F_GETFL, 0);
+    if (0 > flags) {
+        perror("Failed to get socket flags!\n");
+        ::close(socketFd);
+        return udpPeer;
+    }
+
+    if (0 > fcntl(socketFd, F_SETFL, (flags | O_NONBLOCK))) {
+        perror("Failed to enable NON-BLOCKING mode!\n");
         ::close(socketFd);
         return udpPeer;
     }

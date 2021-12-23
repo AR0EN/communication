@@ -7,7 +7,11 @@ inline TcpServer::TcpServer(SOCKET localSocketFd) {
 
     mLocalSocketFd = localSocketFd;
     mRxPipeFd = INVALID_SOCKET;
+#ifdef __WIN32__
     mTxPipeFd = static_cast<unsigned>(INVALID_SOCKET);
+#else   // __WIN32__
+    mTxPipeFd = INVALID_SOCKET;
+#endif  // __WIN32__
 
     mpRxThread.reset(new std::thread(&TcpServer::runRx, this));
     mpTxThread.reset(new std::thread(&TcpServer::runTx, this));

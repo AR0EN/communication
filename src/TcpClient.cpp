@@ -29,15 +29,18 @@ std::unique_ptr<TcpClient> TcpClient::create(const std::string& serverAddr, cons
 #endif  // __WIN32__
 
     SOCKET socketFd = socket(AF_INET, SOCK_STREAM, 0);
-    if (INVALID_SOCKET == socketFd) {
 #ifdef __WIN32__
+    if (INVALID_SOCKET == socketFd) {
         LOGE("socket() failed (error code: %d)!\n", WSAGetLastError());
         WSACleanup();
-#else   // __WIN32__
-        perror("Could not create TCP socket!\n");
-#endif  // __WIN32__
         return tcpClient;
     }
+#else   // __WIN32__
+    if (0 > socketFd) {
+        perror("Could not create TCP socket!\n");
+        return tcpClient;
+    }
+#endif  // __WIN32__
 
 #ifdef __WIN32__
     BOOL enable = TRUE;
@@ -59,7 +62,7 @@ std::unique_ptr<TcpClient> TcpClient::create(const std::string& serverAddr, cons
 #endif  // __WIN32__
 
 #ifdef __WIN32__
-    DWORD timeout = RX_TIMEOUT_S * 1000;
+    DWORD timeout = RX_TIMEOUT_S * 1000U;
     ret = setsockopt (socketFd, SOL_SOCKET, SO_RCVTIMEO, reinterpret_cast<const char *>(&timeout), sizeof(timeout));
     if (SOCKET_ERROR == ret) {
         LOGE("Failed to configure SO_RCVTIMEO (error code: %d)\n", WSAGetLastError());
@@ -100,6 +103,30 @@ std::unique_ptr<TcpClient> TcpClient::create(const std::string& serverAddr, cons
 #endif  // __WIN32__
 
     LOGI("[%s][%d] Connected to %s/%u\n", __func__, __LINE__, serverAddr.c_str(), remotePort);
+
+#ifdef __WIN32__
+    unsigned long non_blocking = 1;
+    ret = ioctlsocket(socketFd, FIONBIO, &non_blocking);
+    if (NO_ERROR != ret) {
+        LOGE("Failed to enable NON-BLOCKING mode (error code: %d)\n", WSAGetLastError());
+        closesocket(socketFd);
+        WSACleanup();
+        return tcpClient;
+    }
+#else   // __WIN32__
+    int flags = fcntl(socketFd, F_GETFL, 0);
+    if (0 > flags) {
+        perror("Failed to get socket flags!\n");
+        ::close(socketFd);
+        return tcpClient;
+    }
+
+    if (0 > fcntl(socketFd, F_SETFL, (flags | O_NONBLOCK))) {
+        perror("Failed to enable NON-BLOCKING mode!\n");
+        ::close(socketFd);
+        return tcpClient;
+    }
+#endif  // __WIN32__
 
     return std::unique_ptr<TcpClient>(new TcpClient(socketFd, serverAddr, remotePort));
 }
@@ -146,7 +173,7 @@ void TcpClient::runTx() {
 
 ssize_t TcpClient::lread(const std::unique_ptr<uint8_t[]>& pBuffer, const size_t& limit) {
 #ifdef __WIN32__
-    ssize_t ret = recv(mSocketFd, reinterpret_cast<char *>(pBuffer.get()), limit, 0);
+    ssize_t ret = ::recv(mSocketFd, reinterpret_cast<char *>(pBuffer.get()), limit, 0);
     if (SOCKET_ERROR == ret) {
         int error = WSAGetLastError();
         if (WSAEWOULDBLOCK == error) {
@@ -158,7 +185,7 @@ ssize_t TcpClient::lread(const std::unique_ptr<uint8_t[]>& pBuffer, const size_t
         LOGD("[%s][%d] Received %ld bytes\n", __func__, __LINE__, ret);
     }
 #else   // __WIN32__
-    ssize_t ret = read(mSocketFd, pBuffer.get(), limit);
+    ssize_t ret = ::recv(mSocketFd, pBuffer.get(), limit, 0);
     if (0 > ret) {
         if (EWOULDBLOCK == errno) {
             ret = 0;
@@ -191,7 +218,7 @@ ssize_t TcpClient::lwrite(const std::unique_ptr<uint8_t[]>& pData, const size_t&
             break;
         }
 #else   // __WIN32__
-        ret = write(mSocketFd, pData.get(), size);
+        ret = ::send(mSocketFd, pData.get(), size, 0);
         if (0 > ret) {
             if (EWOULDBLOCK == errno) {
                 // Ignore & retry

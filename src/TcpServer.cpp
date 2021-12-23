@@ -25,15 +25,19 @@ std::unique_ptr<TcpServer> TcpServer::create(uint16_t localPort) {
 #endif  // __WIN32__
 
     SOCKET localSocketFd = socket(AF_INET, SOCK_STREAM, 0);
-    if (INVALID_SOCKET == localSocketFd) {
 #ifdef __WIN32__
+    if (INVALID_SOCKET == localSocketFd) {
         LOGE("socket() failed (error code: %d)!\n", WSAGetLastError());
         WSACleanup();
-#else   // __WIN32__
-        perror("Could not create TCP socket!\n");
-#endif  // __WIN32__
         return tcpServer;
     }
+#else   // __WIN32__
+    if (0 > localSocketFd) {
+        perror("Could not create TCP socket!\n");
+        return tcpServer;
+    }
+#endif  // __WIN32__
+
     LOGI("[%s][%d]\n", __func__, __LINE__);
 
 #ifdef __WIN32__
@@ -165,6 +169,30 @@ void TcpServer::runRx() {
             }
         }
 
+#ifdef __WIN32__
+        unsigned long non_blocking = 1;
+        ret = ioctlsocket(mRxPipeFd, FIONBIO, &non_blocking);
+        if (NO_ERROR != ret) {
+            LOGE("Failed to enable NON-BLOCKING mode (error code: %d)\n", WSAGetLastError());
+            closesocket(mRxPipeFd);
+            WSACleanup();
+            continue;
+        }
+#else   // __WIN32__
+        int flags = fcntl(mRxPipeFd, F_GETFL, 0);
+        if (0 > flags) {
+            perror("Failed to get socket flags!\n");
+            ::close(mRxPipeFd);
+            continue;
+        }
+
+        if (0 > fcntl(mRxPipeFd, F_SETFL, (flags | O_NONBLOCK))) {
+            perror("Failed to enable NON-BLOCKING mode!\n");
+            ::close(mRxPipeFd);
+            continue;
+        }
+#endif  // __WIN32__
+
         mTxPipeFd = mRxPipeFd;
 
         while(!mExitFlag) {
@@ -174,12 +202,13 @@ void TcpServer::runRx() {
             }
         }
 
-        mTxPipeFd = -1;
+        mTxPipeFd = INVALID_SOCKET;
 #ifdef __WIN32__
         closesocket(mRxPipeFd);
 #else   // __WIN32__
         ::close(mRxPipeFd);
 #endif  // __WIN32__
+        mRxPipeFd = INVALID_SOCKET;
     }
 }
 
@@ -193,7 +222,7 @@ void TcpServer::runTx() {
 
 ssize_t TcpServer::lread(const std::unique_ptr<uint8_t[]>& pBuffer, const size_t& limit) {
 #ifdef __WIN32__
-    ssize_t ret = recv(mRxPipeFd, reinterpret_cast<char *>(pBuffer.get()), limit, 0);
+    ssize_t ret = ::recv(mRxPipeFd, reinterpret_cast<char *>(pBuffer.get()), limit, 0);
     if (SOCKET_ERROR == ret) {
         int error = WSAGetLastError();
         if (WSAEWOULDBLOCK == error) {
@@ -205,7 +234,7 @@ ssize_t TcpServer::lread(const std::unique_ptr<uint8_t[]>& pBuffer, const size_t
         LOGD("[%s][%d] Received %ld bytes\n", __func__, __LINE__, ret);
     }
 #else   // __WIN32__
-    ssize_t ret = read(mRxPipeFd, pBuffer.get(), limit);
+    ssize_t ret = ::recv(mRxPipeFd, pBuffer.get(), limit, 0);
     if (0 > ret) {
         if (EWOULDBLOCK == errno) {
             ret = 0;
@@ -240,7 +269,7 @@ ssize_t TcpServer::lwrite(const std::unique_ptr<uint8_t[]>& pData, const size_t&
             break;
         }
 #else   // __WIN32__
-        ret = write(mTxPipeFd, pData.get(), size);
+        ret = ::send(mTxPipeFd, pData.get(), size, 0);
         if (0 > ret) {
             if (EWOULDBLOCK == errno) {
                 // Ignore & retry

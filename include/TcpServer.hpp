@@ -11,6 +11,7 @@
 
 #else // __WIN32__
 #include <arpa/inet.h>
+#include <fcntl.h>
 #include <sys/socket.h>
 #include <sys/time.h>
 #endif   // __WIN32__
@@ -26,6 +27,11 @@
 #include "common.hpp"
 #include "P2P_Endpoint.hpp"
 #include "Packet.hpp"
+
+#ifndef __WIN32__
+typedef int SOCKET;
+constexpr int INVALID_SOCKET = -1;
+#endif  // __WIN32__
 
 namespace comm {
 
