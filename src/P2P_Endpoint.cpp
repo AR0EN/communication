@@ -19,7 +19,7 @@ bool P2P_Endpoint::proceedRx() {
     return true;
 }
 
-bool P2P_EndPoint::proceedTx(bool discard) {
+bool P2P_Endpoint::proceedTx(bool discard) {
     std::lock_guard<std::mutex> lock(mTxMutex);
 
     std::deque<std::unique_ptr<Packet>> pTxPackets;
