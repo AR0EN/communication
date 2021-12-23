@@ -52,6 +52,19 @@ std::unique_ptr<TcpClient> TcpClient::create(const std::string& serverAddr, cons
 
     LOGI("[%s][%d] Connected to %s/%u\n", __func__, __LINE__, serverAddr.c_str(), remotePort);
 
+    int flags = fcntl(socketFd, F_GETFL, 0);
+    if (0 > flags) {
+        perror("Failed to get socket flags!\n");
+        ::close(socketFd);
+        return tcpClient;
+    }
+
+    if (0 > fcntl(socketFd, F_SETFL, (flags | O_NONBLOCK))) {
+        perror("Failed to enable NON-BLOCKING mode!\n");
+        ::close(socketFd);
+        return tcpClient;
+    }
+
     return std::unique_ptr<TcpClient>(new TcpClient(socketFd, serverAddr, remotePort));
 }
 
@@ -91,7 +104,7 @@ void TcpClient::runTx() {
 }
 
 ssize_t TcpClient::lread(const std::unique_ptr<uint8_t[]>& pBuffer, const size_t& limit) {
-    ssize_t ret = read(mSocketFd, pBuffer.get(), limit);
+    ssize_t ret = ::recv(mSocketFd, pBuffer.get(), limit, 0);
 
     if (0 > ret) {
         if (EWOULDBLOCK == errno) {
@@ -110,7 +123,7 @@ ssize_t TcpClient::lwrite(const std::unique_ptr<uint8_t[]>& pData, const size_t&
     // Send data over TCP
     ssize_t ret = 0LL;
     for (int i = 0; i < TX_RETRY_COUNT; i++) {
-        ret = write(mSocketFd, pData.get(), size);
+        ret = ::send(mSocketFd, pData.get(), size, 0);
 
         if (0 > ret) {
             if (EWOULDBLOCK == errno) {

@@ -2,8 +2,10 @@
 #define __UDPPEER_HPP__
 
 #include <arpa/inet.h>
-#include <cstdint>
+#include <fcntl.h>
 #include <sys/socket.h>
+
+#include <cstdint>
 #include <sys/time.h>
 #include <sys/types.h>
 

@@ -25,12 +25,15 @@ std::unique_ptr<UdpPeer> UdpPeer::create(
         return udpPeer;
     }
 
-    struct timeval timeout;
-    timeout.tv_sec = RX_TIMEOUT_S;
-    timeout.tv_usec = 0;
+    int flags = fcntl(socketFd, F_GETFL, 0);
+    if (0 > flags) {
+        perror("Failed to get socket flags!\n");
+        ::close(socketFd);
+        return udpPeer;
+    }
 
-    if (0 > setsockopt (socketFd, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout))) {
-        perror("Failed to configure SO_RCVTIMEO!\n");
+    if (0 > fcntl(socketFd, F_SETFL, (flags | O_NONBLOCK))) {
+        perror("Failed to enable NON-BLOCKING mode!\n");
         ::close(socketFd);
         return udpPeer;
     }
