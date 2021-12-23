@@ -19,12 +19,16 @@ bool P2P_Endpoint::proceedRx() {
     return true;
 }
 
-bool P2P_Endpoint::proceedTx() {
+bool P2P_Endpoint::proceedTx(bool discard) {
     std::lock_guard<std::mutex> lock(mTxMutex);
 
     std::deque<std::unique_ptr<Packet>> pTxPackets;
     if (!mTxQueue.dequeue(pTxPackets) || (0 >= pTxPackets.size())) {
         // Tx queue is empty!
+        return true;
+    }
+
+    if (discard) {
         return true;
     }
 

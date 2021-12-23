@@ -179,11 +179,7 @@ void TcpServer::runRx() {
 
 void TcpServer::runTx() {
     while(!mExitFlag) {
-        if (!checkTxPipe()) {
-            continue;
-        }
-
-        if (!proceedTx()) {
+        if (!proceedTx(!checkTxPipe())) {
             LOGE("[%s][%d] Tx Pipe was broken!\n", __func__, __LINE__);
         }
     }

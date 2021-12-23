@@ -18,8 +18,8 @@
 #include <thread>
 
 #include "common.hpp"
-#include "P2P_Endpoint.hpp"
 #include "Packet.hpp"
+#include "P2P_Endpoint.hpp"
 
 namespace comm {
 

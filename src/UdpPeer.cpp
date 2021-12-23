@@ -148,11 +148,7 @@ void UdpPeer::runRx() {
 
 void UdpPeer::runTx() {
     while(!mExitFlag) {
-        if (!checkTxPipe()) {
-            continue;
-        }
-
-        if (!proceedTx()) {
+        if (!proceedTx(!checkTxPipe())) {
             LOGE("[%s][%d] Tx Pipe was broken!\n", __func__, __LINE__);
             break;
         }
