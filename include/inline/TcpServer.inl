@@ -2,12 +2,16 @@
 
 namespace comm {
 
-inline TcpServer::TcpServer(int localSocketFd) {
+inline TcpServer::TcpServer(SOCKET localSocketFd) {
     mExitFlag = false;
 
     mLocalSocketFd = localSocketFd;
-    mRxPipeFd = -1;
-    mTxPipeFd = -1;
+    mRxPipeFd = INVALID_SOCKET;
+#ifdef __WIN32__
+    mTxPipeFd = static_cast<unsigned>(INVALID_SOCKET);
+#else   // __WIN32__
+    mTxPipeFd = INVALID_SOCKET;
+#endif  // __WIN32__
 
     mpRxThread.reset(new std::thread(&TcpServer::runRx, this));
     mpTxThread.reset(new std::thread(&TcpServer::runTx, this));
@@ -23,11 +27,19 @@ inline bool TcpServer::isPeerConnected() {
 }
 
 inline bool TcpServer::checkRxPipe() {
+#ifdef __WIN32__
+    return (0 < mRxPipeFd) && (INVALID_SOCKET != mRxPipeFd);
+#else   // __WIN32__
     return (0 < mRxPipeFd);
+#endif  // __WIN32__
 }
 
 inline bool TcpServer::checkTxPipe() {
+#ifdef __WIN32__
+    return (0 < mRxPipeFd) && (INVALID_SOCKET != mRxPipeFd);
+#else   // __WIN32__
     return (0 < mTxPipeFd);
+#endif  // __WIN32__
 }
 
 }   // namespace comm

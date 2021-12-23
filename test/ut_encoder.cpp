@@ -15,11 +15,11 @@ bool test(const std::unique_ptr<uint8_t[]>& pdata, const size_t& size, const siz
 
     // Encoding
     std::unique_ptr<uint8_t[]> pencoded_data;
-    size_t encoded_size;
+    size_t encoded_size = 0ULL;
 
     result = comm::encode(pdata, size, tid++, pencoded_data, encoded_size);
-    LOGI("  * Step 1: encoded %lu bytes to %lu bytes\n",
-        static_cast<uint64_t>(size), static_cast<uint64_t>(encoded_size)
+    LOGI("  * Step 1: encoded %zu bytes to %zu bytes\n",
+        size, encoded_size
     );
 
     if (!result) {
@@ -52,8 +52,8 @@ bool test(const std::unique_ptr<uint8_t[]>& pdata, const size_t& size, const siz
             if (result) {
                 result &= compare(ppacket->getPayload(), pdata, size);
             }
-            LOGI("  -> Decoded %lu bytes\n",
-                static_cast<uint64_t>(ppacket->getPayloadSize())
+            LOGI("  -> Decoded %zu bytes\n",
+                ppacket->getPayloadSize()
             );
         }
     } else {
@@ -68,7 +68,7 @@ int main() {
     for (size_t i = 0; i < vectors.size(); i++) {
         std::unique_ptr<uint8_t[]> pdata(new uint8_t[vectors_sizes[i]]);
         memcpy(pdata.get(), vectors[i], vectors_sizes[i]);
-        LOGI("Test case %02lu:\n", static_cast<uint64_t>(i));
+        LOGI("Test case %02zu:\n", i);
         LOGI("-> %s\n\n", test(pdata, vectors_sizes[i]) ? "Passed" : "Failed");
     }
 

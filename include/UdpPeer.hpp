@@ -1,12 +1,22 @@
 #ifndef __UDPPEER_HPP__
 #define __UDPPEER_HPP__
 
+#ifdef __WIN32__
+#include <winsock2.h>
+#include <ws2tcpip.h>
+
+// Need to link with Ws2_32.lib
+#pragma comment (lib, "Ws2_32.lib")
+// #pragma comment (lib, "Mswsock.lib")
+
+#else // __WIN32__
 #include <arpa/inet.h>
 #include <fcntl.h>
 #include <sys/socket.h>
+#include <sys/time.h>
+#endif   // __WIN32__
 
 #include <cstdint>
-#include <sys/time.h>
 #include <sys/types.h>
 
 #include <memory>
@@ -16,6 +26,10 @@
 #include "common.hpp"
 #include "P2P_Endpoint.hpp"
 #include "Packet.hpp"
+
+#ifndef __WIN32__
+typedef int SOCKET;
+#endif  // __WIN32__
 
 namespace comm {
 
@@ -32,7 +46,7 @@ class UdpPeer : public P2P_Endpoint {
 
  protected:
     UdpPeer(
-        const int& socketFd, const uint16_t& localPort,
+        const SOCKET& socketFd, const uint16_t& localPort,
         const std::string& peerAddress, const uint16_t& peerPort
     );
 
@@ -46,7 +60,7 @@ class UdpPeer : public P2P_Endpoint {
     bool checkTxPipe();
 
     // Local
-    int mSocketFd;
+    SOCKET mSocketFd;
     uint16_t mLocalPort;
 
     // Peer

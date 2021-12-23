@@ -1,12 +1,22 @@
 #ifndef __TCPSERVER_HPP__
 #define __TCPSERVER_HPP__
 
+#ifdef __WIN32__
+#include <winsock2.h>
+#include <ws2tcpip.h>
+
+// Need to link with Ws2_32.lib
+#pragma comment (lib, "Ws2_32.lib")
+// #pragma comment (lib, "Mswsock.lib")
+
+#else // __WIN32__
 #include <arpa/inet.h>
 #include <fcntl.h>
 #include <sys/socket.h>
+#include <sys/time.h>
+#endif   // __WIN32__
 
 #include <cstdint>
-#include <sys/time.h>
 #include <unistd.h>
 
 #include <atomic>
@@ -17,6 +27,11 @@
 #include "common.hpp"
 #include "P2P_Endpoint.hpp"
 #include "Packet.hpp"
+
+#ifndef __WIN32__
+typedef int SOCKET;
+constexpr int INVALID_SOCKET = -1;
+#endif  // __WIN32__
 
 namespace comm {
 
@@ -29,7 +44,7 @@ class TcpServer : public P2P_Endpoint {
     static std::unique_ptr<TcpServer> create(uint16_t localPort);
 
  protected:
-    TcpServer(int localSocketFd);
+    TcpServer(SOCKET localSocketFd);
 
     ssize_t lread(const std::unique_ptr<uint8_t[]>& pBuffer, const size_t& limit) override;
     ssize_t lwrite(const std::unique_ptr<uint8_t[]>& pData, const size_t& size) override;
@@ -45,9 +60,12 @@ class TcpServer : public P2P_Endpoint {
     // TcpServer accept only one client at a time,
     // therefore, accept & read take place in the same thread
     // -> no need to use std::atomic for Rx Pipe
-    int mRxPipeFd;
+    SOCKET mRxPipeFd;
+#ifdef __WIN32__
+    std::atomic<long long unsigned int> mTxPipeFd;
+#else // __WIN32__
     std::atomic<int> mTxPipeFd;
-
+#endif   // __WIN32__
     std::unique_ptr<std::thread> mpRxThread;
     std::unique_ptr<std::thread> mpTxThread;
     std::atomic<bool> mExitFlag;

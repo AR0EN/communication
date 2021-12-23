@@ -3,7 +3,7 @@
 namespace comm {
 
 inline UdpPeer::UdpPeer(
-        const int& socketFd, const uint16_t& localPort,
+        const SOCKET& socketFd, const uint16_t& localPort,
         const std::string& peerAddress, const uint16_t& peerPort
 ) {
     mExitFlag = false;

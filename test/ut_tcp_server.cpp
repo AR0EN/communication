@@ -16,10 +16,12 @@ int main(int argc, char ** argv) {
         LOGE("Usage: %s <Local Port>\n", argv[0]);
         return 1;
     }
+    LOGI("[%s][%d]\n", __func__, __LINE__);
 
     std::unique_ptr<comm::P2P_Endpoint> pEndpoint = comm::TcpServer::create(
         static_cast<uint16_t>(atoi(argv[1]))
     );
+    LOGI("[%s][%d]\n", __func__, __LINE__);
 
     if (!pEndpoint) {
         LOGE("Could not create %s which listens at port %s!\n", EP_NAME, argv[1]);
@@ -49,7 +51,7 @@ int main(int argc, char ** argv) {
         );
 #ifdef USE_RAW_POINTER
         pEndpoint->send(comm::Packet::create(vectors[i], vectors_sizes[i]));
-#else
+#else   // USE_RAW_POINTER
         std::unique_ptr<uint8_t[]> pdata(new uint8_t[vectors_sizes[i]]);
         memcpy(pdata.get(), vectors[i], vectors_sizes[i]);
         pEndpoint->send(comm::Packet::create(pdata, vectors_sizes[i]));

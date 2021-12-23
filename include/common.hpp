@@ -11,7 +11,7 @@
 
 #ifdef DEBUG
 #define LOGD(...)   printf(__VA_ARGS__)
-#else
+#else   // DEBUG
 #define LOGD(...)
 #endif
 
