@@ -10,9 +10,9 @@
 
 #ifdef USE_RAW_POINTER
 #warning "Tests will use Raw Pointers"
-#else
+#else   // USE_RAW_POINTER
 #warning "Tests will use Smart Pointers"
-#endif
+#endif  // USE_RAW_POINTER
 
 inline bool compare(
     const std::unique_ptr<uint8_t[]>& arr0,

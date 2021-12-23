@@ -15,20 +15,59 @@ std::unique_ptr<TcpClient> TcpClient::create(const std::string& serverAddr, cons
         return tcpClient;
     }
 
-    int socketFd = socket(AF_INET, SOCK_STREAM, 0);
-    if (0 > socketFd) {
+    int ret;
+
+#ifdef __WIN32__
+    //---------------------------------------
+    // Initialize Winsock
+    WSADATA wsaData;
+    ret = WSAStartup(MAKEWORD(2, 2), &wsaData);
+    if (NO_ERROR != ret) {
+        LOGE("WSAStartup() failed (error code: %d)!\n", ret);
+        return tcpClient;
+    }
+#endif  // __WIN32__
+
+    SOCKET socketFd = socket(AF_INET, SOCK_STREAM, 0);
+    if (INVALID_SOCKET == socketFd) {
+#ifdef __WIN32__
+        LOGE("socket() failed (error code: %d)!\n", WSAGetLastError());
+        WSACleanup();
+#else   // __WIN32__
         perror("Could not create TCP socket!\n");
+#endif  // __WIN32__
         return tcpClient;
     }
 
+#ifdef __WIN32__
+    BOOL enable = TRUE;
+    ret = setsockopt(socketFd, SOL_SOCKET, SO_REUSEADDR, reinterpret_cast<const char *>(&enable), sizeof(enable));
+    if (SOCKET_ERROR == ret) {
+        LOGE("Failed to enable SO_REUSEADDR (error code: %d)\n", WSAGetLastError());
+        closesocket(socketFd);
+        WSACleanup();
+        return tcpClient;
+    }
+#else   // __WIN32__
     int enable = 1;
-    int ret = setsockopt(socketFd, SOL_SOCKET, SO_REUSEADDR, &enable, sizeof(int));
+    ret = setsockopt(socketFd, SOL_SOCKET, SO_REUSEADDR, &enable, sizeof(enable));
     if (0 > ret) {
         perror("Failed to enable SO_REUSEADDR!\n");
         ::close(socketFd);
         return tcpClient;
     }
+#endif  // __WIN32__
 
+#ifdef __WIN32__
+    DWORD timeout = RX_TIMEOUT_S * 1000;
+    ret = setsockopt (socketFd, SOL_SOCKET, SO_RCVTIMEO, reinterpret_cast<const char *>(&timeout), sizeof(timeout));
+    if (SOCKET_ERROR == ret) {
+        LOGE("Failed to configure SO_RCVTIMEO (error code: %d)\n", WSAGetLastError());
+        closesocket(socketFd);
+        WSACleanup();
+        return tcpClient;
+    }
+#else   // __WIN32__
     struct timeval timeout;
     timeout.tv_sec = RX_TIMEOUT_S;
     timeout.tv_usec = 0;
@@ -38,17 +77,27 @@ std::unique_ptr<TcpClient> TcpClient::create(const std::string& serverAddr, cons
         ::close(socketFd);
         return tcpClient;
     }
+#endif  // __WIN32__
 
     struct sockaddr_in remoteSocketAddr;
     remoteSocketAddr.sin_family      = AF_INET;
     remoteSocketAddr.sin_addr.s_addr = inet_addr(serverAddr.c_str());
     remoteSocketAddr.sin_port        = htons(remotePort);
-    ret = connect(socketFd, (struct sockaddr *)&remoteSocketAddr, sizeof(remoteSocketAddr));
+    ret = connect(socketFd, reinterpret_cast<const struct sockaddr *>(&remoteSocketAddr), sizeof(remoteSocketAddr));
+#ifdef __WIN32__
+    if (SOCKET_ERROR == ret) {
+        LOGE("Failed to connect to %s/%u (error code: %d)\n", serverAddr.c_str(), remotePort, WSAGetLastError());
+        closesocket(socketFd);
+        WSACleanup();
+        return tcpClient;
+    }
+#else   // __WIN32__
     if (0 != ret) {
         perror("Failed to connect to server!\n");
         ::close(socketFd);
         return tcpClient;
     }
+#endif  // __WIN32__
 
     LOGI("[%s][%d] Connected to %s/%u\n", __func__, __LINE__, serverAddr.c_str(), remotePort);
 
@@ -67,7 +116,12 @@ void TcpClient::close() {
     }
 
     if (0 <= mSocketFd) {
+#ifdef __WIN32__
+        closesocket(mSocketFd);
+        WSACleanup();
+#else   // __WIN32__
         ::close(mSocketFd);
+#endif  // __WIN32__
         mSocketFd = -1;
     }
 }
@@ -93,15 +147,28 @@ void TcpClient::runTx() {
 ssize_t TcpClient::lread(const std::unique_ptr<uint8_t[]>& pBuffer, const size_t& limit) {
     ssize_t ret = read(mSocketFd, pBuffer.get(), limit);
 
-    if (0 > ret) {
-        if (EWOULDBLOCK == errno) {
+#ifdef __WIN32__
+    if (SOCKET_ERROR == ret) {
+        int error = WSAGetLastError();
+        if (WSAEWOULDBLOCK == error) {
             ret = 0;
         } else {
-            perror("");
+            LOGE("Failed to read from Tcp Socket (error code: %d)\n", error);
         }
     } else if (0 < ret) {
         LOGD("[%s][%d] Received %ld bytes\n", __func__, __LINE__, ret);
     }
+#else   // __WIN32__
+    if (0 > ret) {
+        if (EWOULDBLOCK == errno) {
+            ret = 0;
+        } else {
+            perror("Failed to read from Tcp Socket!");
+        }
+    } else if (0 < ret) {
+        LOGD("[%s][%d] Received %ld bytes\n", __func__, __LINE__, ret);
+    }
+#endif  // __WIN32__
 
     return ret;
 }
@@ -112,17 +179,31 @@ ssize_t TcpClient::lwrite(const std::unique_ptr<uint8_t[]>& pData, const size_t&
     for (int i = 0; i < TX_RETRY_COUNT; i++) {
         ret = write(mSocketFd, pData.get(), size);
 
+#ifdef __WIN32__
+        if (SOCKET_ERROR == ret) {
+            int error = WSAGetLastError();
+            if (WSAEWOULDBLOCK == error) {
+                // Ignore & retry
+            } else {
+                LOGE("Failed to write to Tcp Socket (error code: %d)\n", error);
+            }
+        } else if (0 < ret) {
+            LOGD("[%s][%d] Transmitted %ld bytes\n", __func__, __LINE__, ret);
+            break;
+        }
+#else   // __WIN32__
         if (0 > ret) {
             if (EWOULDBLOCK == errno) {
                 // Ignore & retry
             } else {
-                perror("");
+                perror("Failed to write to Tcp Socket!");
                 break;
             }
-        } else {
+        } else if (0 < ret) {
             LOGD("[%s][%d] Transmitted %ld bytes\n", __func__, __LINE__, ret);
             break;
         }
+#endif  // __WIN32__
     }
 
     return ret;

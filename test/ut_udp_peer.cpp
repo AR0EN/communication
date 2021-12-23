@@ -50,7 +50,7 @@ int main(int argc, char ** argv) {
         );
 #ifdef USE_RAW_POINTER
         pEndpoint->send(comm::Packet::create(vectors[i], vectors_sizes[i]));
-#else
+#else   // USE_RAW_POINTER
         std::unique_ptr<uint8_t[]> pdata(new uint8_t[vectors_sizes[i]]);
         memcpy(pdata.get(), vectors[i], vectors_sizes[i]);
         pEndpoint->send(comm::Packet::create(pdata, vectors_sizes[i]));

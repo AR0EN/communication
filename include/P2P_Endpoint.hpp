@@ -10,13 +10,21 @@
 #include <memory>
 #include <mutex>
 
+#ifdef __WIN32__
+#include <windows.h>
+#endif   // __WIN32__
+
 #include "Encoder.hpp"
 #include "Packet.hpp"
 #include "SyncQueue.hpp"
 
 namespace comm {
 
+#ifdef __WIN32__
+static constexpr DWORD RX_TIMEOUT_S = 1;
+#else // __WIN32__
 static constexpr time_t RX_TIMEOUT_S = 1LL;
+#endif   // __WIN32__
 static constexpr int TX_RETRY_COUNT = 3;
 
 class P2P_Endpoint {

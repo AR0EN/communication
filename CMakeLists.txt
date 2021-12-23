@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.16)
 
-project(comm-unit-tests)
+project(Communication)
 
 set(CMAKE_CXX_STANDARD 11)
 
@@ -38,6 +38,10 @@ add_library(
     src/TcpServer.cpp
     src/UdpPeer.cpp
 )
+
+if (WIN32)
+target_link_libraries(comm ws2_32)
+endif (WIN32)
 
 # add `-DBUILD_TESTS=ON` to compile unit tests
 OPTION(BUILD_TESTS "Enable unit tests" ON) # Enabled by default

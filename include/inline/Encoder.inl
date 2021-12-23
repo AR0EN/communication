@@ -20,7 +20,7 @@ inline bool comm::encode(
         );
         return false;
     }
-#else
+#else   // DEBUG
     if ((pData) && validate_payload_size(size))
 #endif  // DEBUG
     {

@@ -1,10 +1,16 @@
 #ifndef __UDPPEER_HPP__
 #define __UDPPEER_HPP__
 
+#ifdef __WIN32__
+#include <winsock2.h>
+#include <ws2tcpip.h>
+#else // __WIN32__
 #include <arpa/inet.h>
-#include <cstdint>
 #include <sys/socket.h>
 #include <sys/time.h>
+#endif   // __WIN32__
+
+#include <cstdint>
 #include <sys/types.h>
 
 #include <memory>
@@ -30,7 +36,7 @@ class UdpPeer : public P2P_Endpoint {
 
  protected:
     UdpPeer(
-        const int& socketFd, const uint16_t& localPort,
+        const SOCKET& socketFd, const uint16_t& localPort,
         const std::string& peerAddress, const uint16_t& peerPort
     );
 
@@ -44,7 +50,7 @@ class UdpPeer : public P2P_Endpoint {
     bool checkTxPipe();
 
     // Local
-    int mSocketFd;
+    SOCKET mSocketFd;
     uint16_t mLocalPort;
 
     // Peer

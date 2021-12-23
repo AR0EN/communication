@@ -97,3 +97,28 @@ if (pTcpClient->recvAll(pPackets)) {
 }
 ...
 ```
+
+## Compilation
+* Ubuntu
+```
+rm -rf build
+mkdir build
+cd build
+cmake ..
+make
+```
+
+* Windows (MinGW64)
+```
+rm -rf build
+mkdir build
+cd build
+cmake -G "MinGW Makefiles" ..
+cmake --build .
+```
+
+* Note
+  * CMAKE Option `-DDEFINE_DEBUG=ON`: to enable debug log
+  * CMAKE Option `-DDEFINE_PROFILING=ON`: to enable profiling
+  * CMAKE Option `-DBUILD_TESTS=OFF`: to disable unit tests' compilation
+  * CMAKE Option `-DUSE_RAW_POINTER=ON`: to use Raw Pointers in unit tests

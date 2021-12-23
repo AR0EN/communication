@@ -2,7 +2,7 @@
 
 namespace comm {
 
-inline TcpClient::TcpClient(const int& socketFd, const std::string serverAddr, uint16_t remotePort) {
+inline TcpClient::TcpClient(const SOCKET& socketFd, const std::string serverAddr, uint16_t remotePort) {
     mExitFlag = false;
 
     mSocketFd = socketFd;
