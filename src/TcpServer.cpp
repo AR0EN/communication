@@ -95,6 +95,19 @@ void TcpServer::runRx() {
             }
         }
 
+        int flags = fcntl(mRxPipeFd, F_GETFL, 0);
+        if (0 > flags) {
+            perror("Failed to get socket flags!\n");
+            ::close(mRxPipeFd);
+            continue;
+        }
+
+        if (0 > fcntl(mRxPipeFd, F_SETFL, (flags | O_NONBLOCK))) {
+            perror("Failed to enable NON-BLOCKING mode!\n");
+            ::close(mRxPipeFd);
+            continue;
+        }
+
         mTxPipeFd = mRxPipeFd;
 
         while(!mExitFlag) {
@@ -118,7 +131,7 @@ void TcpServer::runTx() {
 }
 
 ssize_t TcpServer::lread(const std::unique_ptr<uint8_t[]>& pBuffer, const size_t& limit) {
-    ssize_t ret = read(mRxPipeFd, pBuffer.get(), limit);
+    ssize_t ret = ::recv(mRxPipeFd, pBuffer.get(), limit, 0);
 
     if (0 > ret) {
         if (EWOULDBLOCK == errno) {
@@ -137,7 +150,7 @@ ssize_t TcpServer::lwrite(const std::unique_ptr<uint8_t[]>& pData, const size_t&
     // Send data over TCP
     ssize_t ret = 0LL;
     for (int i = 0; i < TX_RETRY_COUNT; i++) {
-        ret = write(mTxPipeFd, pData.get(), size);
+        ret = ::send(mTxPipeFd, pData.get(), size, 0);
 
         if (0 > ret) {
             if (EWOULDBLOCK != errno) {
