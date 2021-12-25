@@ -32,7 +32,7 @@ bool P2P_Endpoint::proceedTx(bool discard) {
         return true;
     }
 
-    LOGD("[%s][%d] %lu packets in Tx queue\n", __func__, __LINE__, pTxPackets.size());
+    LOGD("[%s][%d] %zu packets in Tx queue\n", __func__, __LINE__, pTxPackets.size());
 
     std::unique_ptr<uint8_t[]> pEncodedData;
     size_t encodedSize;
@@ -53,7 +53,7 @@ bool P2P_Endpoint::proceedTx(bool discard) {
             LOGE("[%s][%d] Could not write to lower layer!\n", __func__, __LINE__);
             return false;
         } else {
-            LOGD("[%s][%d] Wrote %ld bytes\n", __func__, __LINE__, byteCount);
+            LOGD("[%s][%d] Wrote %zd bytes\n", __func__, __LINE__, byteCount);
         }
     }
 

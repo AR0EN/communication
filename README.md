@@ -12,19 +12,23 @@ A lightweight library for Packet-based P2P Communication
 .
 ├── docs/
 ├── include/
+│   └── inline
 ├── src/
 ├── test/
 ├── tools/
+├── wrapper
+│   └── README.md
 ├── LICENSE
 ├── README.md
 └── CMakeLists.txt
 ```
 
-* `docs`   : documentation
-* `include`: libcomm headers
-* `src`    : libcomm implementation
-* `test`   : unit tests
-* `tool`   : scripts for unit testing
+* `docs`    : documentation
+* `include` : libcomm headers
+* `src`     : libcomm implementation
+* `test`    : unit tests (native & python)
+* `tool`    : scripts for generating data for unit testing
+* `wrapper` : wrapper for libcomm
 
 ## Usage
 * `UdpPeer`
@@ -101,18 +105,18 @@ if (pTcpClient->recvAll(pPackets)) {
 ## Compilation
 * Ubuntu
 ```
-rm -rf build
-mkdir build
-cd build
+rm -rf build-linux
+mkdir build-linux
+cd build-linux
 cmake ..
 make
 ```
 
 * Windows (MinGW64)
 ```
-rm -rf build
-mkdir build
-cd build
+rm -rf build-mingw
+mkdir build-mingw
+cd build-mingw
 cmake -G "MinGW Makefiles" ..
 cmake --build .
 ```

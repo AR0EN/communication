@@ -61,7 +61,7 @@ std::unique_ptr<UdpPeer> UdpPeer::create(
 #ifdef __WIN32__
     unsigned long non_blocking = 1;
     ret = ioctlsocket(socketFd, FIONBIO, &non_blocking);
-    if (NO_ERROR != ret) {
+    if (SOCKET_ERROR == ret) {
         LOGE("Failed to enable NON-BLOCKING mode (error code: %d)\n", WSAGetLastError());
         closesocket(socketFd);
         WSACleanup();
@@ -180,7 +180,7 @@ ssize_t UdpPeer::lread(const std::unique_ptr<uint8_t[]>& pBuffer, const size_t& 
             LOGE("Failed to read from UDP Socket (error code: %d)\n", error);
         }
     } else if (0 < ret) {
-        LOGD("[%s][%d] Received %ld bytes\n", __func__, __LINE__, ret);
+        LOGD("[%s][%d] Received %zd bytes\n", __func__, __LINE__, ret);
     }
 #else   // __WIN32__
     ssize_t ret = recvfrom(
@@ -195,7 +195,7 @@ ssize_t UdpPeer::lread(const std::unique_ptr<uint8_t[]>& pBuffer, const size_t& 
             perror("Failed to read from UDP Socket!");
         }
     } else if (0 < ret) {
-        LOGD("[%s][%d] Received %ld bytes\n", __func__, __LINE__, ret);
+        LOGD("[%s][%d] Received %zd bytes\n", __func__, __LINE__, ret);
     }
 #endif  // __WIN32__
 
@@ -222,7 +222,7 @@ ssize_t UdpPeer::lwrite(const std::unique_ptr<uint8_t[]>& pData, const size_t& s
                     LOGE("Failed to write to UDP Socket (error code: %d)\n", error);
                 }
             } else if (0 < ret) {
-                LOGD("[%s][%d] Transmitted %ld bytes\n", __func__, __LINE__, ret);
+                LOGD("[%s][%d] Transmitted %zd bytes\n", __func__, __LINE__, ret);
                 break;
             }
 #else   // __WIN32__
@@ -239,7 +239,7 @@ ssize_t UdpPeer::lwrite(const std::unique_ptr<uint8_t[]>& pData, const size_t& s
                     break;
                 }
             } else if (0 < ret) {
-                LOGD("[%s][%d] Transmitted %ld bytes\n", __func__, __LINE__, ret);
+                LOGD("[%s][%d] Transmitted %zd bytes\n", __func__, __LINE__, ret);
                 break;
             }
 #endif  // __WIN32__

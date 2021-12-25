@@ -107,7 +107,7 @@ std::unique_ptr<TcpClient> TcpClient::create(const std::string& serverAddr, cons
 #ifdef __WIN32__
     unsigned long non_blocking = 1;
     ret = ioctlsocket(socketFd, FIONBIO, &non_blocking);
-    if (NO_ERROR != ret) {
+    if (SOCKET_ERROR == ret) {
         LOGE("Failed to enable NON-BLOCKING mode (error code: %d)\n", WSAGetLastError());
         closesocket(socketFd);
         WSACleanup();
@@ -182,7 +182,7 @@ ssize_t TcpClient::lread(const std::unique_ptr<uint8_t[]>& pBuffer, const size_t
             LOGE("Failed to read from Tcp Socket (error code: %d)\n", error);
         }
     } else if (0 < ret) {
-        LOGD("[%s][%d] Received %ld bytes\n", __func__, __LINE__, ret);
+        LOGD("[%s][%d] Received %zd bytes\n", __func__, __LINE__, ret);
     }
 #else   // __WIN32__
     ssize_t ret = ::recv(mSocketFd, pBuffer.get(), limit, 0);
@@ -193,7 +193,7 @@ ssize_t TcpClient::lread(const std::unique_ptr<uint8_t[]>& pBuffer, const size_t
             perror("Failed to read from Tcp Socket!");
         }
     } else if (0 < ret) {
-        LOGD("[%s][%d] Received %ld bytes\n", __func__, __LINE__, ret);
+        LOGD("[%s][%d] Received %zd bytes\n", __func__, __LINE__, ret);
     }
 #endif  // __WIN32__
 
@@ -214,7 +214,7 @@ ssize_t TcpClient::lwrite(const std::unique_ptr<uint8_t[]>& pData, const size_t&
                 LOGE("Failed to write to Tcp Socket (error code: %d)\n", error);
             }
         } else if (0 < ret) {
-            LOGD("[%s][%d] Transmitted %ld bytes\n", __func__, __LINE__, ret);
+            LOGD("[%s][%d] Transmitted %zd bytes\n", __func__, __LINE__, ret);
             break;
         }
 #else   // __WIN32__
@@ -227,7 +227,7 @@ ssize_t TcpClient::lwrite(const std::unique_ptr<uint8_t[]>& pData, const size_t&
                 break;
             }
         } else if (0 < ret) {
-            LOGD("[%s][%d] Transmitted %ld bytes\n", __func__, __LINE__, ret);
+            LOGD("[%s][%d] Transmitted %zd bytes\n", __func__, __LINE__, ret);
             break;
         }
 #endif  // __WIN32__

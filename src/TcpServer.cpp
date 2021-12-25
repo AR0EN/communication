@@ -21,7 +21,6 @@ std::unique_ptr<TcpServer> TcpServer::create(uint16_t localPort) {
         LOGE("WSAStartup() failed (error code: %d)!\n", ret);
         return tcpServer;
     }
-    LOGI("[%s][%d]\n", __func__, __LINE__);
 #endif  // __WIN32__
 
     SOCKET localSocketFd = socket(AF_INET, SOCK_STREAM, 0);
@@ -38,8 +37,6 @@ std::unique_ptr<TcpServer> TcpServer::create(uint16_t localPort) {
     }
 #endif  // __WIN32__
 
-    LOGI("[%s][%d]\n", __func__, __LINE__);
-
 #ifdef __WIN32__
     BOOL enable = TRUE;
     ret = setsockopt(localSocketFd, SOL_SOCKET, SO_REUSEADDR, reinterpret_cast<const char *>(&enable), sizeof(enable));
@@ -49,7 +46,6 @@ std::unique_ptr<TcpServer> TcpServer::create(uint16_t localPort) {
         WSACleanup();
         return tcpServer;
     }
-    LOGI("[%s][%d]\n", __func__, __LINE__);
 #else   // __WIN32__
     int enable = 1;
     ret = setsockopt(localSocketFd, SOL_SOCKET, SO_REUSEADDR, &enable, sizeof(int));
@@ -61,15 +57,15 @@ std::unique_ptr<TcpServer> TcpServer::create(uint16_t localPort) {
 #endif  // __WIN32__
 
 #ifdef __WIN32__
-    DWORD timeout = RX_TIMEOUT_S * 1000;
-    ret = setsockopt (localSocketFd, SOL_SOCKET, SO_RCVTIMEO, reinterpret_cast<const char *>(&timeout), sizeof(timeout));
-    if (SOCKET_ERROR == ret) {
-        LOGE("Failed to configure SO_RCVTIMEO (error code: %d)\n", WSAGetLastError());
+    // winsock does not support timeout!
+    // Reference: https://docs.microsoft.com/en-us/windows/win32/api/winsock2/nf-winsock2-accept
+    unsigned long non_blocking = 1;
+    if (SOCKET_ERROR == ioctlsocket(localSocketFd, FIONBIO, &non_blocking)) {
+        LOGE("Failed to enable NON-BLOCKING mode (error code: %d)\n", WSAGetLastError());
         closesocket(localSocketFd);
         WSACleanup();
         return tcpServer;
     }
-    LOGI("[%s][%d]\n", __func__, __LINE__);
 #else   // __WIN32__
     struct timeval timeout;
     timeout.tv_sec = RX_TIMEOUT_S;
@@ -94,7 +90,6 @@ std::unique_ptr<TcpServer> TcpServer::create(uint16_t localPort) {
         WSACleanup();
         return tcpServer;
     }
-    LOGI("[%s][%d]\n", __func__, __LINE__);
 #else   // __WIN32__
     ret = bind(localSocketFd, reinterpret_cast<const struct sockaddr *>(&localSocketAddr), sizeof(localSocketAddr));
     if (0 > ret) {
@@ -112,7 +107,6 @@ std::unique_ptr<TcpServer> TcpServer::create(uint16_t localPort) {
         WSACleanup();
         return tcpServer;
     }
-    LOGI("[%s][%d]\n", __func__, __LINE__);
 #else   // __WIN32__
     if (0 != ret) {
         perror("Failed to mark the socket as a passive socket!\n");
@@ -160,7 +154,11 @@ void TcpServer::runRx() {
                             );
 
         if (!checkRxPipe()) {
+#ifdef __WIN32__
+            if (WSAEWOULDBLOCK == WSAGetLastError()) {
+#else  // __WIN32__
             if (EAGAIN == errno) {
+#endif  // __WIN32__
                 // Timeout - do nothing
                 continue;
             } else {
@@ -171,7 +169,7 @@ void TcpServer::runRx() {
 
 #ifdef __WIN32__
         unsigned long non_blocking = 1;
-        if (NO_ERROR != ioctlsocket(mRxPipeFd, FIONBIO, &non_blocking)) {
+        if (SOCKET_ERROR == ioctlsocket(mRxPipeFd, FIONBIO, &non_blocking)) {
             LOGE("Failed to enable NON-BLOCKING mode (error code: %d)\n", WSAGetLastError());
             closesocket(mRxPipeFd);
             WSACleanup();
@@ -230,7 +228,7 @@ ssize_t TcpServer::lread(const std::unique_ptr<uint8_t[]>& pBuffer, const size_t
             LOGE("Failed to read from Tcp Socket (error code: %d)\n", error);
         }
     } else if (0 < ret) {
-        LOGD("[%s][%d] Received %ld bytes\n", __func__, __LINE__, ret);
+        LOGD("[%s][%d] Received %zd bytes\n", __func__, __LINE__, ret);
     }
 #else   // __WIN32__
     ssize_t ret = ::recv(mRxPipeFd, pBuffer.get(), limit, 0);
@@ -241,7 +239,7 @@ ssize_t TcpServer::lread(const std::unique_ptr<uint8_t[]>& pBuffer, const size_t
             perror("Failed to read from Tcp Socket!");
         }
     } else if (0 < ret) {
-        LOGD("[%s][%d] Received %ld bytes\n", __func__, __LINE__, ret);
+        LOGD("[%s][%d] Received %zd bytes\n", __func__, __LINE__, ret);
     }
 #endif  // __WIN32__
 
@@ -264,7 +262,7 @@ ssize_t TcpServer::lwrite(const std::unique_ptr<uint8_t[]>& pData, const size_t&
                 break;                
             }
         } else if (0 < ret) {
-            LOGD("[%s][%d] Transmitted %ld bytes\n", __func__, __LINE__, ret);
+            LOGD("[%s][%d] Transmitted %zd bytes\n", __func__, __LINE__, ret);
             break;
         }
 #else   // __WIN32__
@@ -278,7 +276,7 @@ ssize_t TcpServer::lwrite(const std::unique_ptr<uint8_t[]>& pData, const size_t&
                 break;
             }
         } else if (0 < ret) {
-            LOGD("[%s][%d] Transmitted %ld bytes\n", __func__, __LINE__, ret);
+            LOGD("[%s][%d] Transmitted %zd bytes\n", __func__, __LINE__, ret);
             break;
         }
 #endif  // __WIN32__

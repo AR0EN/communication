@@ -11,8 +11,11 @@ bool comm_udp_peer_init(const uint16_t& local_port, const char * const remote_ad
 
 void comm_deinit();
 
+bool comm_endpoint_ready();
+bool comm_peer_connected();
+
 bool comm_p2p_endpoint_send(const uint8_t * const buffer, const size_t& buffer_size);
-ssize_t comm_p2p_endpoint_recv(uint8_t * const buffer, const size_t& buffer_size);
+ssize_t comm_p2p_endpoint_recv(uint8_t * const buffer, const size_t& buffer_size, int64_t& timestamp_us);
 
 }
 
