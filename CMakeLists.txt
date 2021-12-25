@@ -39,9 +39,13 @@ add_library(
     src/UdpPeer.cpp
 )
 
+set_target_properties(comm PROPERTIES POSITION_INDEPENDENT_CODE True)
+
 if (WIN32)
 target_link_libraries(comm ws2_32)
 endif (WIN32)
+
+add_subdirectory(wrapper)
 
 # add `-DBUILD_TESTS=ON` to compile unit tests
 OPTION(BUILD_TESTS "Enable unit tests" ON) # Enabled by default
