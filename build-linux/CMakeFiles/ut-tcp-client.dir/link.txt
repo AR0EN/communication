@@ -1,0 +1,1 @@
+/usr/bin/c++     CMakeFiles/ut-tcp-client.dir/test/ut_tcp_client.cpp.o  -o ut-tcp-client  libcomm.a libtest-vectors.a -lpthread 

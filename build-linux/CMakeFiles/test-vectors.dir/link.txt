@@ -1,0 +1,2 @@
+/usr/bin/ar qc libtest-vectors.a  CMakeFiles/test-vectors.dir/test/test_vectors.cpp.o
+/usr/bin/ranlib libtest-vectors.a

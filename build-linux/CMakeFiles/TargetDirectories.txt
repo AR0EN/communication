@@ -1,0 +1,8 @@
+/media/lehoang318/wspace/docker-shared/communication/build-linux/CMakeFiles/rebuild_cache.dir
+/media/lehoang318/wspace/docker-shared/communication/build-linux/CMakeFiles/ut-tcp-server.dir
+/media/lehoang318/wspace/docker-shared/communication/build-linux/CMakeFiles/ut-udp-peer.dir
+/media/lehoang318/wspace/docker-shared/communication/build-linux/CMakeFiles/ut-encoder.dir
+/media/lehoang318/wspace/docker-shared/communication/build-linux/CMakeFiles/edit_cache.dir
+/media/lehoang318/wspace/docker-shared/communication/build-linux/CMakeFiles/ut-tcp-client.dir
+/media/lehoang318/wspace/docker-shared/communication/build-linux/CMakeFiles/test-vectors.dir
+/media/lehoang318/wspace/docker-shared/communication/build-linux/CMakeFiles/comm.dir
