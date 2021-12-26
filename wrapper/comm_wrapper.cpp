@@ -135,7 +135,7 @@ size_t comm_p2p_endpoint_recv_packet(uint8_t * const p_buffer, const size_t& buf
 size_t comm_p2p_endpoint_recv_packets(
     uint8_t * const buffer, const size_t& buffer_size,
     size_t * const p_packet_sizes,
-    int64_t * const timestamps,
+    int64_t * const p_timestamps,
     const size_t& max_number_of_packets
 ) {
     if ((0 == buffer_size) || (0 == max_number_of_packets)) {
@@ -170,7 +170,7 @@ size_t comm_p2p_endpoint_recv_packets(
         p_rx_packets.pop_front();
 
         memcpy((buffer + buffer_index), p_packet->getPayload().get(), packet_size);
-        timestamps[packet_index] = p_packet->getTimestampUs();
+        p_timestamps[packet_index] = p_packet->getTimestampUs();
         LOGD("[%s][%d] Packet %zu (%zu bytes) at %ld (us) -> Buffer index: %zu\n",
             __func__, __LINE__,
             packet_index, packet_size, p_packet->getTimestampUs(), buffer_index

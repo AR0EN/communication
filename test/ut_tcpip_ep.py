@@ -1,3 +1,6 @@
+import sys
+
+sys.path.append('../wrapper')
 import comm_wrapper
 import time
 

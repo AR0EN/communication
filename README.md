@@ -55,7 +55,7 @@ if (udpPeer.recvAll(pPackets)) {
 
 * TCP Server
 ```
-// Construct a Tcp Server
+// Construct a TCP Server
 std::unique_ptr<comm::P2P_Endpoint> pTcpServer = comm::TcpServer::create(<Local Port>);
 ...
 
@@ -63,7 +63,7 @@ std::unique_ptr<comm::P2P_Endpoint> pTcpServer = comm::TcpServer::create(<Local 
 while (!pTcpServer->isPeerConnected()) {}
 ...
 
-// Send a packet to Tcp Client
+// Send a packet to TCP Client
 pTcpServer->send(comm::Packet::create(<buffer address>, <buffer size>));
 ...
 
@@ -79,17 +79,17 @@ if (pTcpServer->recvAll(pPackets)) {
 
 * TCP Client
 ```
-// Construct a Tcp Client
+// Construct a TCP Client
 std::unique_ptr<comm::P2P_Endpoint> pTcpClient =
     comm::TcpClient::create(<Server IP Address>, <Server Port>);
 
 if (!pTcpClient) {
-    LOGE("Could not create Tcp Client which connects to %s/%u!\n", <Server IP Address>, <Server Port>);
+    LOGE("Could not create TCP Client which connects to %s/%u!\n", <Server IP Address>, <Server Port>);
     return 1;
 }
 ...
 
-// Send a packet to Tcp Server
+// Send a packet to TCP Server
 pTcpClient->send(comm::Packet::create(<buffer address>, <buffer size>));
 ...
 

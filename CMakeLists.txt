@@ -88,7 +88,7 @@ add_executable(
 
 target_link_libraries(ut-udp-peer comm test-vectors pthread)
 
-# Unit test - Tcp Client & Server
+# Unit test - TCP Client & Server
 add_executable(
     ut-tcp-client
     test/ut_tcp_client.cpp

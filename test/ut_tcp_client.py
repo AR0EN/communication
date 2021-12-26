@@ -1,5 +1,6 @@
 import sys
 
+sys.path.append('../wrapper')
 import comm_wrapper
 import ut_tcpip_ep
 
@@ -12,7 +13,7 @@ if __name__ == "__main__":
         print('Could not load shared library!')
         exit()
 
-    print('Initializing Tcp Client ...')
+    print('Initializing TCP Client ...')
     if (comm_wrapper.comm_tcp_client_init(sys.argv[1], int(sys.argv[2]))):
         print('-> Successfully!')
     else:

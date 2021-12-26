@@ -115,7 +115,7 @@ std::unique_ptr<TcpServer> TcpServer::create(uint16_t localPort) {
     }
 #endif  // __WIN32__
 
-    LOGI("[%s][%d] Tcp Server is listenning at port %u ...\n", __func__, __LINE__, localPort);
+    LOGI("[%s][%d] TCP Server is listenning at port %u ...\n", __func__, __LINE__, localPort);
 
     return std::unique_ptr<TcpServer>(new TcpServer(localSocketFd));
 }
@@ -225,7 +225,7 @@ ssize_t TcpServer::lread(const std::unique_ptr<uint8_t[]>& pBuffer, const size_t
         if (WSAEWOULDBLOCK == error) {
             ret = 0;
         } else {
-            LOGE("Failed to read from Tcp Socket (error code: %d)\n", error);
+            LOGE("Failed to read from TCP Socket (error code: %d)\n", error);
         }
     } else if (0 == ret) {
         ret = -2;   // Stream socket peer has performed an orderly shutdown!
@@ -238,7 +238,7 @@ ssize_t TcpServer::lread(const std::unique_ptr<uint8_t[]>& pBuffer, const size_t
         if (EWOULDBLOCK == errno) {
             ret = 0;
         } else {
-            perror("Failed to read from Tcp Socket!");
+            perror("Failed to read from TCP Socket!");
         }
     } else if (0 == ret) {
         ret = -2;   // Stream socket peer has performed an orderly shutdown!
@@ -262,7 +262,7 @@ ssize_t TcpServer::lwrite(const std::unique_ptr<uint8_t[]>& pData, const size_t&
                 // Ignore & retry
             } else {
                 mTxPipeFd = -1;
-                LOGE("Failed to write to Tcp Socket (error code: %d)\n", error);
+                LOGE("Failed to write to TCP Socket (error code: %d)\n", error);
                 break;
             }
         } else if (0 == ret) {
@@ -278,7 +278,7 @@ ssize_t TcpServer::lwrite(const std::unique_ptr<uint8_t[]>& pData, const size_t&
                 // Ignore & retry
             } else {
                 mTxPipeFd = -1;
-                perror("Failed to write to Tcp Socket!");
+                perror("Failed to write to TCP Socket!");
                 break;
             }
         } else if (0 == ret) {

@@ -13,11 +13,11 @@ def comm_tcp_client_init(server_addr, server_port):
         return False
 
     if (not server_addr) or (type(server_addr) is not str):
-        print('1st argument, address of Tcp Server, must be a string!')
+        print('1st argument, address of TCP Server, must be a string!')
         return False
 
     if (not server_port) or (type(server_port) is not int) or (0 >= server_port):
-        print('2nd argument, Tcp Server Port, must be positive integer!')
+        print('2nd argument, TCP Server Port, must be positive integer!')
         return False
 
     wrapper.comm_tcp_client_init.restype = ctypes.c_bool
@@ -33,7 +33,7 @@ def comm_tcp_server_init(port):
         return False
 
     if (not port) or (type(port) is not int) or (0 >= port):
-        print('1st argument, Tcp Server Port, must be positive integer!')
+        print('1st argument, TCP Server Port, must be positive integer!')
         return False
 
     wrapper.comm_tcp_server_init.restype = ctypes.c_bool
@@ -106,7 +106,7 @@ C_RX_BUFFER_SIZE = ctypes.c_size_t(4096)
 CREF_RX_BUFFER_SIZE = ctypes.byref(C_RX_BUFFER_SIZE)
 c_rx_buffer = (ctypes.c_uint8 * C_RX_BUFFER_SIZE.value)()
 
-# size_t comm_p2p_endpoint_recv_packet(uint8_t * const buffer, const size_t& buffer_size, int64_t& timestamp_us);
+# size_t comm_p2p_endpoint_recv_packet(uint8_t * const p_buffer, const size_t& buffer_size, int64_t& timestamp_us);
 def comm_p2p_endpoint_recv_packet():
     global wrapper
     packet = {}
@@ -129,9 +129,9 @@ def comm_p2p_endpoint_recv_packet():
     return packet
 
 # size_t comm_p2p_endpoint_recv_packets(
-#     uint8_t * const buffer, const size_t& buffer_size,
-#     size_t * const packet_sizes,
-#     int64_t * const timestamps,
+#     uint8_t * const p_buffer, const size_t& buffer_size,
+#     size_t * const p_packet_sizes,
+#     int64_t * const p_timestamps,
 #     const size_t& max_number_of_packets
 # );
 C_MAX_NUMBER_OF_PACKETS = ctypes.c_size_t(10)

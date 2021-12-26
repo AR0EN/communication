@@ -1,5 +1,6 @@
 import sys
 
+sys.path.append('../wrapper')
 import comm_wrapper
 import ut_tcpip_ep
 
@@ -12,7 +13,7 @@ if __name__ == "__main__":
         print('Could not load shared library!')
         exit()
 
-    print('Initializing Udp Endpoint ...')
+    print('Initializing UDP Endpoint ...')
     if (comm_wrapper.comm_udp_peer_init(int(sys.argv[1]), sys.argv[2], int(sys.argv[3]))):
         print('-> Successfully!')
     else:
