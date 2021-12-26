@@ -194,7 +194,10 @@ ssize_t UdpPeer::lread(const std::unique_ptr<uint8_t[]>& pBuffer, const size_t& 
         } else {
             perror("Failed to read from UDP Socket!");
         }
-    } else if (0 < ret) {
+    } else if (0 == ret) {
+        // zero-length datagrams!
+        LOGI("[%s][%d] Zero-length datagram!\n", __func__, __LINE__);
+    } else {
         LOGD("[%s][%d] Received %ld bytes\n", __func__, __LINE__, ret);
     }
 #endif  // __WIN32__
@@ -238,12 +241,14 @@ ssize_t UdpPeer::lwrite(const std::unique_ptr<uint8_t[]>& pData, const size_t& s
                     perror("Failed to write to UDP Socket!");
                     break;
                 }
-            } else if (0 < ret) {
+            } else if (0 == ret) {
+                // Should not happen!
+            } else {
                 LOGD("[%s][%d] Transmitted %ld bytes\n", __func__, __LINE__, ret);
                 break;
             }
 #endif  // __WIN32__
-        }        
+        }
     }
 
     return ret;
