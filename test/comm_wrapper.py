@@ -82,7 +82,7 @@ def comm_peer_connected():
     wrapper.comm_peer_connected.restype = ctypes.c_bool
     return wrapper.comm_peer_connected()
 
-# bool comm_p2p_endpoint_send(const uint8_t * const buffer, const size_t& buffer_size);
+# bool comm_p2p_endpoint_send(const uint8_t * const p_buffer, const size_t& buffer_size);
 def comm_p2p_endpoint_send(buffer):
     global wrapper
     if (not wrapper):

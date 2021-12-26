@@ -96,17 +96,17 @@ bool comm_peer_connected() {
     return p_endpoint->isPeerConnected();
 }
 
-bool comm_p2p_endpoint_send(const uint8_t * const buffer, const size_t& buffer_size) {
+bool comm_p2p_endpoint_send(const uint8_t * const p_buffer, const size_t& buffer_size) {
     std::lock_guard<std::mutex> lock(endpoint_mutex);
     if (nullptr == p_endpoint) {
         LOGE("[%s][%d] Endpoint has not been initialized!!\n", __func__, __LINE__);
         return false;
     }
 
-    return p_endpoint->send(comm::Packet::create(buffer, buffer_size));
+    return p_endpoint->send(comm::Packet::create(p_buffer, buffer_size));
 }
 
-size_t comm_p2p_endpoint_recv_packet(uint8_t * const buffer, const size_t& buffer_size, int64_t& timestamp_us) {
+size_t comm_p2p_endpoint_recv_packet(uint8_t * const p_buffer, const size_t& buffer_size, int64_t& timestamp_us) {
     std::lock_guard<std::mutex> lock(rx_queue_mutex);
     if (p_rx_packets.empty()) {
         std::lock_guard<std::mutex> lock(endpoint_mutex);
@@ -122,7 +122,7 @@ size_t comm_p2p_endpoint_recv_packet(uint8_t * const buffer, const size_t& buffe
                 __func__, __LINE__, buffer_size, rx_count
             );
         } else {
-            memcpy(buffer, p_rx_packets.front()->getPayload().get(), rx_count);
+            memcpy(p_buffer, p_rx_packets.front()->getPayload().get(), rx_count);
             timestamp_us = p_rx_packets.front()->getTimestampUs();
             p_rx_packets.pop_front();
             return rx_count;
@@ -134,7 +134,7 @@ size_t comm_p2p_endpoint_recv_packet(uint8_t * const buffer, const size_t& buffe
 
 size_t comm_p2p_endpoint_recv_packets(
     uint8_t * const buffer, const size_t& buffer_size,
-    size_t * const packet_sizes,
+    size_t * const p_packet_sizes,
     int64_t * const timestamps,
     const size_t& max_number_of_packets
 ) {
@@ -176,7 +176,7 @@ size_t comm_p2p_endpoint_recv_packets(
             packet_index, packet_size, p_packet->getTimestampUs(), buffer_index
         );
 
-        packet_sizes[packet_index] = packet_size;
+        p_packet_sizes[packet_index] = packet_size;
         buffer_index += packet_size;
         packet_index++;
     }

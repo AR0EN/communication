@@ -14,12 +14,12 @@ void comm_deinit();
 bool comm_endpoint_ready();
 bool comm_peer_connected();
 
-bool comm_p2p_endpoint_send(const uint8_t * const buffer, const size_t& buffer_size);
-size_t comm_p2p_endpoint_recv_packet(uint8_t * const buffer, const size_t& buffer_size, int64_t& timestamp_us);
+bool comm_p2p_endpoint_send(const uint8_t * const p_buffer, const size_t& buffer_size);
+size_t comm_p2p_endpoint_recv_packet(uint8_t * const p_buffer, const size_t& buffer_size, int64_t& timestamp_us);
 size_t comm_p2p_endpoint_recv_packets(
-    uint8_t * const buffer, const size_t& buffer_size,
-    size_t * const packet_sizes,
-    int64_t * const timestamps,
+    uint8_t * const p_buffer, const size_t& buffer_size,
+    size_t * const p_packet_sizes,
+    int64_t * const p_timestamps,
     const size_t& max_number_of_packets
 );
 

@@ -44,8 +44,10 @@ def execute():
     input()
 
     for i, v in enumerate(test_vectors.vectors):
-        comm_wrapper.comm_p2p_endpoint_send(v)
-        print('[{} (us)] Sent packet {} ({} bytes)'.format(time.monotonic_ns()/1000, i, len(v)))
+        if (comm_wrapper.comm_p2p_endpoint_send(v)):
+            print('[{} (us)] Sent packet {} ({} bytes)!'.format(time.monotonic_ns()/1000, i, len(v)))
+        else:
+            print('[{} (us)] Failed to send packet {} ({} bytes)!'.format(time.monotonic_ns()/1000, i, len(v)))
 
     print('Press enter to check Rx Queue ...')
     input()
