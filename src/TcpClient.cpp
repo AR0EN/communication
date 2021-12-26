@@ -94,9 +94,16 @@ std::unique_ptr<TcpClient> TcpClient::create(const std::string& serverAddr, cons
 
     do {
         ret = connect(socketFd, reinterpret_cast<const struct sockaddr *>(&remoteSocketAddr), sizeof(remoteSocketAddr));
+#ifdef __WIN32__
+        if ((0 == ret) || (WSAEISCONN == WSAGetLastError())) {
+            ret = 0;
+            break;
+        }
+#else   // __WIN32__
         if (0 == ret) {
             break;
         }
+#endif  // __WIN32__
     } while (
         RX_TIMEOUT_S > std::chrono::duration_cast<std::chrono::seconds>(
                             get_monotonic_clock() - t0
@@ -105,14 +112,10 @@ std::unique_ptr<TcpClient> TcpClient::create(const std::string& serverAddr, cons
 
 #ifdef __WIN32__
     if (SOCKET_ERROR == ret) {
-        int error = WSAGetLastError();
-
-        if (WSAEISCONN != error) {
-            LOGE("Failed to connect to %s/%u (error code: %d)\n", serverAddr.c_str(), remotePort, WSAGetLastError());
-            closesocket(socketFd);
-            WSACleanup();
-            return tcpClient;
-        }
+        LOGE("Failed to connect to %s/%u (error code: %d)\n", serverAddr.c_str(), remotePort, WSAGetLastError());
+        closesocket(socketFd);
+        WSACleanup();
+        return tcpClient;
     }
 #else   // __WIN32__
     if (0 != ret) {
