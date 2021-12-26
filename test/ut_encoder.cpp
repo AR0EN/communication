@@ -35,9 +35,7 @@ bool test(const std::unique_ptr<uint8_t[]>& pdata, const size_t& size, const siz
     while (0 < encoded_size) {
         chunk_size = (max_chunk_size < encoded_size)? max_chunk_size:encoded_size;
         encoded_size -= chunk_size;
-        LOGD("Feed %lu bytes -> %lu bytes left!\n",
-            static_cast<uint64_t>(chunk_size), static_cast<uint64_t>(encoded_size)
-        );
+        LOGD("Feed %zu bytes -> %zu bytes left!\n", chunk_size, encoded_size);
         ptmp.reset(new uint8_t[chunk_size]);
         memcpy(ptmp.get(), internal_pointer, chunk_size);
         decoder.feed(ptmp, chunk_size);
@@ -50,7 +48,7 @@ bool test(const std::unique_ptr<uint8_t[]>& pdata, const size_t& size, const siz
         for (auto& ppacket : pdecoded_packets) {
             result &= size == ppacket->getPayloadSize();
             if (result) {
-                result &= compare(ppacket->getPayload(), pdata, size);
+                result &= ncompare(ppacket->getPayload(), pdata, size);
             }
             LOGI("  -> Decoded %zu bytes\n",
                 ppacket->getPayloadSize()

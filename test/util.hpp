@@ -14,7 +14,7 @@
 #warning "Tests will use Smart Pointers"
 #endif  // USE_RAW_POINTER
 
-inline bool compare(
+inline bool ncompare(
     const std::unique_ptr<uint8_t[]>& arr0,
     const std::unique_ptr<uint8_t[]>& arr1,
     const size_t& size
@@ -29,7 +29,7 @@ inline bool compare(
     return true;
 }
 
-inline bool compare(
+inline bool ncompare(
     const std::unique_ptr<uint8_t[]>& arr0,
     const uint8_t* const& arr1,
     const size_t& size
@@ -45,29 +45,26 @@ inline bool compare(
 }
 
 inline bool test(const std::deque<std::unique_ptr<comm::Packet>>& pRxPackets) {
-    bool result = (vectors.size() == pRxPackets.size());
+    const size_t EXPECTED_NUMBER_OF_PACKETS = vectors.size();
+    const size_t NUMBER_OF_RX_PACKETS = pRxPackets.size();
+    LOGI("Received %zu packets!\n", NUMBER_OF_RX_PACKETS);
 
     size_t i = 0;
-    size_t number_of_tests = (vectors.size() < pRxPackets.size()) ? vectors.size() : pRxPackets.size();
-    
-    for (auto& pPacket : pRxPackets) {
-        size_t packet_size = pPacket->getPayloadSize();
-        LOGI("Packet %zu (%zu bytes)\n", i, packet_size);
-        if (vectors_sizes[i] == packet_size) {
-            if (compare(pPacket->getPayload(), vectors[i], vectors_sizes[i])) {
-                LOGI("  -> Matched!\n");
-            } else {
-                LOGI("  -> Data is not matched!\n");
-                result = false;
-            }
+    size_t packet_size;
+    bool result = (EXPECTED_NUMBER_OF_PACKETS == NUMBER_OF_RX_PACKETS);
+    while ((EXPECTED_NUMBER_OF_PACKETS > i) && (NUMBER_OF_RX_PACKETS > i)) {
+        packet_size = pRxPackets[i]->getPayloadSize();
+        LOGI("[%ld (us)] Packet %zu (%zu bytes)\n", 
+            static_cast<long int>(pRxPackets[i]->getTimestampUs()), i, packet_size
+        );
+        if (ncompare(pRxPackets[i]->getPayload(), vectors[i], vectors_sizes[i])) {
+            LOGI("  -> Matched!\n");
         } else {
-            LOGI("  -> Packet length is not matched (expected: %zu bytes)!\n", vectors_sizes[i]);
+            LOGI("  -> Not matched!\n");
             result = false;
         }
 
-        if (number_of_tests <= ++i) {
-            break;
-        }
+        i++;
     }
 
     return result;

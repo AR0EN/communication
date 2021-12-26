@@ -12,20 +12,24 @@ A lightweight library for Packet-based P2P Communication
 .
 ├── docs/
 ├── include/
+│   └── inline
 ├── src/
 ├── test/
 ├── tools/
+├── wrapper
+│   └── README.md
 ├── CMakeLists.txt
 ├── LICENSE
 ├── README.md
 └── setup.sh
 ```
 
-* `docs`   : documentation
-* `include`: libcomm headers
-* `src`    : libcomm implementation
-* `test`   : unit tests
-* `tool`   : scripts for unit testing
+* `docs`    : documentation
+* `include` : libcomm headers
+* `src`     : libcomm implementation
+* `test`    : unit tests (native & python)
+* `tool`    : scripts for generating data for unit testing
+* `wrapper` : wrapper for libcomm
 
 ## Usage
 * `UdpPeer`
@@ -51,7 +55,7 @@ if (udpPeer.recvAll(pPackets)) {
 
 * TCP Server
 ```
-// Construct a Tcp Server
+// Construct a TCP Server
 std::unique_ptr<comm::P2P_Endpoint> pTcpServer = comm::TcpServer::create(<Local Port>);
 ...
 
@@ -59,7 +63,7 @@ std::unique_ptr<comm::P2P_Endpoint> pTcpServer = comm::TcpServer::create(<Local 
 while (!pTcpServer->isPeerConnected()) {}
 ...
 
-// Send a packet to Tcp Client
+// Send a packet to TCP Client
 pTcpServer->send(comm::Packet::create(<buffer address>, <buffer size>));
 ...
 
@@ -75,17 +79,17 @@ if (pTcpServer->recvAll(pPackets)) {
 
 * TCP Client
 ```
-// Construct a Tcp Client
+// Construct a TCP Client
 std::unique_ptr<comm::P2P_Endpoint> pTcpClient =
     comm::TcpClient::create(<Server IP Address>, <Server Port>);
 
 if (!pTcpClient) {
-    LOGE("Could not create Tcp Client which connects to %s/%u!\n", <Server IP Address>, <Server Port>);
+    LOGE("Could not create TCP Client which connects to %s/%u!\n", <Server IP Address>, <Server Port>);
     return 1;
 }
 ...
 
-// Send a packet to Tcp Server
+// Send a packet to TCP Server
 pTcpClient->send(comm::Packet::create(<buffer address>, <buffer size>));
 ...
 
@@ -102,18 +106,18 @@ if (pTcpClient->recvAll(pPackets)) {
 ## Compilation
 * Ubuntu
 ```
-rm -rf build
-mkdir build
-cd build
+rm -rf build-linux
+mkdir build-linux
+cd build-linux
 cmake ..
 make
 ```
 
 * Windows (MinGW64)
 ```
-rm -rf build
-mkdir build
-cd build
+rm -rf build-mingw
+mkdir build-mingw
+cd build-mingw
 cmake -G "MinGW Makefiles" ..
 cmake --build .
 ```

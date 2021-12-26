@@ -15,9 +15,7 @@ inline bool comm::encode(
     }
 
     if (!validate_payload_size(size)) {
-        LOGD("[%s][%d] Input buffer size (%lu) is not acceptable!\n",
-            __func__, __LINE__, static_cast<uint64_t>(size)
-        );
+        LOGD("[%s][%d] Input buffer size (%zu) is not acceptable!\n", __func__, __LINE__, size);
         return false;
     }
 #else   // DEBUG
@@ -58,7 +56,7 @@ inline bool comm::encode(
 // Decoding
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 inline void comm::Decoder::feed(const std::unique_ptr<uint8_t[]>& pdata, const size_t& size) {
-    LOGD("[%s][%d] Feed %lu bytes!\n", __func__, __LINE__, size);
+    LOGD("[%s][%d] Feed %zu bytes!\n", __func__, __LINE__, size);
     for (size_t i = 0; i < size; i++) {
         proceed(pdata[i]);
     }
@@ -178,8 +176,8 @@ inline void comm::Decoder::proceed(const uint8_t& b) {
                     LOGE("Decoder Queue is full!\n");
                 }
 
-                LOGD("[%s][%d] Decoded a packet with %lu bytes payload at %ld (us)!\n",
-                    __func__, __LINE__, mPayloadSize, timestampUs
+                LOGD("[%s][%d] Decoded a packet with %zu bytes payload at %lld (us)!\n",
+                    __func__, __LINE__, mPayloadSize, static_cast<long long int>(timestampUs)
                 );
             } else {
                 // Discard

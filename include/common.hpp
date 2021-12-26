@@ -55,6 +55,6 @@ inline bool validate_payload_size(const size_t& payload_size) {
     return (MAX_PAYLOAD_SIZE >= (SF_SIZE + SIZE_OF_PAYLOAD_SIZE + SIZE_OF_TID + payload_size + EF_SIZE));
 }
 
-}; // namespace comm
+}   // namespace comm
 
 #endif // _COMMON_HPP_

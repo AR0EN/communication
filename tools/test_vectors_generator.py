@@ -10,6 +10,7 @@ NUM_OF_VECTORS = 10
 
 VECTOR_HEADER = 'test_vectors.hpp'
 VECTOR_SRC = 'test_vectors.cpp'
+VECTOR_PY = 'test_vectors.py'
 
 vectors = []
 
@@ -60,3 +61,21 @@ with open(VECTOR_HEADER, 'w') as fw:
 
 
     fw.write('#endif  // _TEST_VECTORS_HPP_\n')
+
+with open(VECTOR_PY, 'w') as fw:
+    fw.write('vectors = []\n\n')
+
+    for i, v in enumerate(vectors):
+        fw.write('# Vector[{}]: {} bytes\n'.format(i, len(v)))
+        fw.write('vectors.append(bytes([\n')
+        tmp = ''
+        for j, val in enumerate(v):
+            tmp += '0x{0:02X},'.format(val)
+            if (0 == ((j + 1) % 8)):
+                tmp += '\n    '
+            else:
+                tmp += ' '
+
+        tmp = tmp.strip(' ,')
+        fw.write('    ' + tmp + '\n')
+        fw.write(']))\n\n')

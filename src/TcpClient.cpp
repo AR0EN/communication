@@ -62,52 +62,9 @@ std::unique_ptr<TcpClient> TcpClient::create(const std::string& serverAddr, cons
 #endif  // __WIN32__
 
 #ifdef __WIN32__
-    DWORD timeout = RX_TIMEOUT_S * 1000U;
-    ret = setsockopt (socketFd, SOL_SOCKET, SO_RCVTIMEO, reinterpret_cast<const char *>(&timeout), sizeof(timeout));
-    if (SOCKET_ERROR == ret) {
-        LOGE("Failed to configure SO_RCVTIMEO (error code: %d)\n", WSAGetLastError());
-        closesocket(socketFd);
-        WSACleanup();
-        return tcpClient;
-    }
-#else   // __WIN32__
-    struct timeval timeout;
-    timeout.tv_sec = RX_TIMEOUT_S;
-    timeout.tv_usec = 0;
-    ret = setsockopt (socketFd, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout));
-    if (0 > ret) {
-        perror("Failed to configure SO_RCVTIMEO!\n");
-        ::close(socketFd);
-        return tcpClient;
-    }
-#endif  // __WIN32__
-
-    struct sockaddr_in remoteSocketAddr;
-    remoteSocketAddr.sin_family      = AF_INET;
-    remoteSocketAddr.sin_addr.s_addr = inet_addr(serverAddr.c_str());
-    remoteSocketAddr.sin_port        = htons(remotePort);
-    ret = connect(socketFd, reinterpret_cast<const struct sockaddr *>(&remoteSocketAddr), sizeof(remoteSocketAddr));
-#ifdef __WIN32__
-    if (SOCKET_ERROR == ret) {
-        LOGE("Failed to connect to %s/%u (error code: %d)\n", serverAddr.c_str(), remotePort, WSAGetLastError());
-        closesocket(socketFd);
-        WSACleanup();
-        return tcpClient;
-    }
-#else   // __WIN32__
-    if (0 != ret) {
-        perror("Failed to connect to server!\n");
-        ::close(socketFd);
-        return tcpClient;
-    }
-#endif  // __WIN32__
-
-    LOGI("[%s][%d] Connected to %s/%u\n", __func__, __LINE__, serverAddr.c_str(), remotePort);
-
-#ifdef __WIN32__
     unsigned long non_blocking = 1;
     ret = ioctlsocket(socketFd, FIONBIO, &non_blocking);
-    if (NO_ERROR != ret) {
+    if (SOCKET_ERROR == ret) {
         LOGE("Failed to enable NON-BLOCKING mode (error code: %d)\n", WSAGetLastError());
         closesocket(socketFd);
         WSACleanup();
@@ -127,6 +84,48 @@ std::unique_ptr<TcpClient> TcpClient::create(const std::string& serverAddr, cons
         return tcpClient;
     }
 #endif  // __WIN32__
+
+    struct sockaddr_in remoteSocketAddr;
+    remoteSocketAddr.sin_family      = AF_INET;
+    remoteSocketAddr.sin_addr.s_addr = inet_addr(serverAddr.c_str());
+    remoteSocketAddr.sin_port        = htons(remotePort);
+
+    auto t0 = get_monotonic_clock();
+
+    do {
+        ret = connect(socketFd, reinterpret_cast<const struct sockaddr *>(&remoteSocketAddr), sizeof(remoteSocketAddr));
+#ifdef __WIN32__
+        if ((0 == ret) || (WSAEISCONN == WSAGetLastError())) {
+            ret = 0;
+            break;
+        }
+#else   // __WIN32__
+        if (0 == ret) {
+            break;
+        }
+#endif  // __WIN32__
+    } while (
+        RX_TIMEOUT_S > std::chrono::duration_cast<std::chrono::seconds>(
+                            get_monotonic_clock() - t0
+                        ).count()
+    );
+
+#ifdef __WIN32__
+    if (SOCKET_ERROR == ret) {
+        LOGE("Failed to connect to %s/%u (error code: %d)\n", serverAddr.c_str(), remotePort, WSAGetLastError());
+        closesocket(socketFd);
+        WSACleanup();
+        return tcpClient;
+    }
+#else   // __WIN32__
+    if (0 != ret) {
+        perror("Failed to connect to server!\n");
+        ::close(socketFd);
+        return tcpClient;
+    }
+#endif  // __WIN32__
+
+    LOGI("[%s][%d] Connected to %s/%u\n", __func__, __LINE__, serverAddr.c_str(), remotePort);
 
     return std::unique_ptr<TcpClient>(new TcpClient(socketFd, serverAddr, remotePort));
 }
@@ -179,10 +178,12 @@ ssize_t TcpClient::lread(const std::unique_ptr<uint8_t[]>& pBuffer, const size_t
         if (WSAEWOULDBLOCK == error) {
             ret = 0;
         } else {
-            LOGE("Failed to read from Tcp Socket (error code: %d)\n", error);
+            LOGE("Failed to read from TCP Socket (error code: %d)\n", error);
         }
-    } else if (0 < ret) {
-        LOGD("[%s][%d] Received %ld bytes\n", __func__, __LINE__, ret);
+    } else if (0 == ret) {
+        ret = -2;   // Stream socket peer has performed an orderly shutdown!
+    } else {
+        LOGD("[%s][%d] Received %zd bytes\n", __func__, __LINE__, ret);
     }
 #else   // __WIN32__
     ssize_t ret = ::recv(mSocketFd, pBuffer.get(), limit, 0);
@@ -190,12 +191,12 @@ ssize_t TcpClient::lread(const std::unique_ptr<uint8_t[]>& pBuffer, const size_t
         if (EWOULDBLOCK == errno) {
             ret = 0;
         } else {
-            perror("Failed to read from Tcp Socket!");
+            perror("Failed to read from TCP Socket!");
         }
     } else if (0 == ret) {
         ret = -2;   // Stream socket peer has performed an orderly shutdown!
     } else {
-        LOGD("[%s][%d] Received %ld bytes\n", __func__, __LINE__, ret);
+        LOGD("[%s][%d] Received %zd bytes\n", __func__, __LINE__, ret);
     }
 #endif  // __WIN32__
 
@@ -213,10 +214,12 @@ ssize_t TcpClient::lwrite(const std::unique_ptr<uint8_t[]>& pData, const size_t&
             if (WSAEWOULDBLOCK == error) {
                 // Ignore & retry
             } else {
-                LOGE("Failed to write to Tcp Socket (error code: %d)\n", error);
+                LOGE("Failed to write to TCP Socket (error code: %d)\n", error);
             }
-        } else if (0 < ret) {
-            LOGD("[%s][%d] Transmitted %ld bytes\n", __func__, __LINE__, ret);
+        } else if (0 == ret) {
+            // Should not happen!
+        } else {
+            LOGD("[%s][%d] Transmitted %zd bytes\n", __func__, __LINE__, ret);
             break;
         }
 #else   // __WIN32__
@@ -225,13 +228,13 @@ ssize_t TcpClient::lwrite(const std::unique_ptr<uint8_t[]>& pData, const size_t&
             if (EWOULDBLOCK == errno) {
                 // Ignore & retry
             } else {
-                perror("Failed to write to Tcp Socket!");
+                perror("Failed to write to TCP Socket!");
                 break;
             }
         } else if (0 == ret) {
             // Should not happen!
         } else {
-            LOGD("[%s][%d] Transmitted %ld bytes\n", __func__, __LINE__, ret);
+            LOGD("[%s][%d] Transmitted %zd bytes\n", __func__, __LINE__, ret);
             break;
         }
 #endif  // __WIN32__

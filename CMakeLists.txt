@@ -39,9 +39,13 @@ add_library(
     src/UdpPeer.cpp
 )
 
+set_target_properties(comm PROPERTIES POSITION_INDEPENDENT_CODE True)
+
 if (WIN32)
 target_link_libraries(comm ws2_32)
 endif (WIN32)
+
+add_subdirectory(wrapper)
 
 # add `-DBUILD_TESTS=ON` to compile unit tests
 OPTION(BUILD_TESTS "Enable unit tests" ON) # Enabled by default
@@ -84,7 +88,7 @@ add_executable(
 
 target_link_libraries(ut-udp-peer comm test-vectors pthread)
 
-# Unit test - Tcp Client & Server
+# Unit test - TCP Client & Server
 add_executable(
     ut-tcp-client
     test/ut_tcp_client.cpp
