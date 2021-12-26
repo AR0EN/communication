@@ -3,6 +3,8 @@
 
 #include <cstdint>
 
+#include "common.hpp"
+
 extern "C" {
 
 bool comm_tcp_client_init(const char * const server_addr, const uint16_t& server_port);
@@ -15,7 +17,15 @@ bool comm_endpoint_ready();
 bool comm_peer_connected();
 
 bool comm_p2p_endpoint_send(const uint8_t * const buffer, const size_t& buffer_size);
-ssize_t comm_p2p_endpoint_recv(uint8_t * const buffer, const size_t& buffer_size, int64_t& timestamp_us);
+ssize_t comm_p2p_endpoint_recv_packet(uint8_t * const buffer, const size_t& buffer_size, int64_t& timestamp_us);
+
+/**
+ * Format: ... | Timestamp in us (int64_t LE) of packet n | Size of packet n (uint32_t LE) | Packet n | ...
+ */
+constexpr size_t PACKET_TIMESTAMP_SIZE = 8UL;
+constexpr size_t SIZE_OF_PACKET_SIZE   = 4UL;
+ssize_t comm_p2p_endpoint_recv_packets(uint8_t * const buffer, const size_t& buffer_size);
+
 
 }
 

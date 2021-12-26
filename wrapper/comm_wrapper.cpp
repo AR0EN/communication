@@ -106,7 +106,7 @@ bool comm_p2p_endpoint_send(const uint8_t * const buffer, const size_t& buffer_s
     return p_endpoint->send(comm::Packet::create(buffer, buffer_size));
 }
 
-ssize_t comm_p2p_endpoint_recv(uint8_t * const buffer, const size_t& buffer_size, int64_t& timestamp_us) {
+ssize_t comm_p2p_endpoint_recv_packet(uint8_t * const buffer, const size_t& buffer_size, int64_t& timestamp_us) {
     std::lock_guard<std::mutex> lock(rx_queue_mutex);
     if (p_rx_packets.empty()) {
         std::lock_guard<std::mutex> lock(endpoint_mutex);
@@ -123,6 +123,34 @@ ssize_t comm_p2p_endpoint_recv(uint8_t * const buffer, const size_t& buffer_size
             );
         } else {
             memcpy(buffer, p_rx_packets.front()->getPayload().get(), rx_count);
+            timestamp_us = p_rx_packets.front()->getTimestampUs();
+            p_rx_packets.pop_front();
+            return rx_count;
+        }
+    }
+
+    return 0;
+}
+
+ssize_t comm_p2p_endpoint_recv_packets(uint8_t * const buffer, const size_t& buffer_size) {
+    std::lock_guard<std::mutex> lock(rx_queue_mutex);
+    if (p_rx_packets.empty()) {
+        std::lock_guard<std::mutex> lock(endpoint_mutex);
+        if (nullptr != p_endpoint) {
+            p_endpoint->recvAll(p_rx_packets, false);
+        }
+    }
+
+    size_t buffer_index = 0;
+    size_t packet_size = 0;
+    size_t packet_timestamp_us = 0;
+    while (!p_rx_packets.empty()) {
+        packet_size = p_rx_packets.front()->getPayloadSize();
+
+        if (buffer_size < (buffer_index + packet_size + PACKET_TIMESTAMP_SIZE + SIZE_OF_PACKET_SIZE)) {
+            break;
+        } else {
+            memcpy((buffer + buffer_index), p_rx_packets.front()->getPayload().get(), rx_count);
             timestamp_us = p_rx_packets.front()->getTimestampUs();
             p_rx_packets.pop_front();
             return rx_count;
