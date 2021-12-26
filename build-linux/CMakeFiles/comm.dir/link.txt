@@ -1,2 +1,0 @@
-/usr/bin/ar qc libcomm.a  CMakeFiles/comm.dir/src/P2P_Endpoint.cpp.o CMakeFiles/comm.dir/src/TcpClient.cpp.o CMakeFiles/comm.dir/src/TcpServer.cpp.o CMakeFiles/comm.dir/src/UdpPeer.cpp.o
-/usr/bin/ranlib libcomm.a

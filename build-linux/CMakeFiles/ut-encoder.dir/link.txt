@@ -1,1 +1,0 @@
-/usr/bin/c++     CMakeFiles/ut-encoder.dir/test/ut_encoder.cpp.o  -o ut-encoder  libcomm.a libtest-vectors.a -lpthread 
