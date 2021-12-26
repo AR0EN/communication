@@ -3,7 +3,7 @@ import time
 
 import test_vectors
 
-TIMEOUT_S = 10
+TIMEOUT_S = 3
 
 def ncompare(buf0, buf1, n):
     if (0 >= n):
@@ -13,7 +13,7 @@ def ncompare(buf0, buf1, n):
     if (n > len(buf0)):
         print('Length of 1st buffer ({}) is less than expected ({})!'.format(len(buf0, n)))
         return False
-    
+
     if (n > len(buf0)):
         print('Length of 2nd buffer ({}) is less than expected ({})!'.format(len(buf1, n)))
         return False
@@ -52,21 +52,39 @@ def execute():
     result = True
     i = 0
     t0 = time.monotonic()
-    while (len(test_vectors.vectors) > i):
-        (rx_buffer, timestamp_us) = comm_wrapper.comm_p2p_endpoint_recv()
-        if (rx_buffer):
-            print('Received {} bytes at {} (us)'.format(len(rx_buffer), timestamp_us))
-            if (ncompare(test_vectors.vectors[i], rx_buffer, len(test_vectors.vectors[i]))):
-                print('-> Matched!')
-            else:
-                print('-> Not matched!')
-                result = False
+    # while (len(test_vectors.vectors) > i):
+    #     (rx_buffer, timestamp_us) = comm_wrapper.comm_p2p_endpoint_recv()
+    #     if (rx_buffer):
+    #         print('Received {} bytes at {} (us)'.format(len(rx_buffer), timestamp_us))
+    #         if (ncompare(test_vectors.vectors[i], rx_buffer, len(test_vectors.vectors[i]))):
+    #             print('-> Matched!')
+    #         else:
+    #             print('-> Not matched!')
+    #             result = False
 
-            i += 1
+    #         i += 1
 
-        if (TIMEOUT_S < (time.monotonic() - t0)):
-            print('Reception timeout!')
+    #     if (TIMEOUT_S < (time.monotonic() - t0)):
+    #         print('Reception timeout!')
+    #         result = False
+    #         break
+    packets = []
+    while ((len(packets) < len(test_vectors.vectors)) and (TIMEOUT_S > (time.monotonic() - t0))):
+        tmp = comm_wrapper.comm_p2p_endpoint_recv_packets()
+        if (tmp):
+            packets.extend(tmp)
+
+    print('Received', len(packets), 'packets!')
+    while (len(test_vectors.vectors) > i) and (len(packets) > i):
+        print('[{} (us)] Packet {} ({} bytes)'.format(
+            packets[i]['timestamp_us'], i, len(packets[i]['data']),
+        ))
+        if (ncompare(test_vectors.vectors[i], packets[i]['data'], len(test_vectors.vectors[i]))):
+            print('-> Matched!')
+        else:
+            print('-> Not matched!')
             result = False
-            break
 
-    return result
+        i += 1
+
+    return result and (len(test_vectors.vectors) == len(packets))

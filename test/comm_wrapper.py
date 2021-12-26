@@ -88,7 +88,7 @@ def comm_p2p_endpoint_send(buffer):
     if (not wrapper):
         print('Shared library must be loaded in advance!')
         return False
-    
+
     if (not buffer) or ((type(buffer) is not bytes) and (type(buffer) is not bytearray)):
         print('1st argument, Tx Buffer, must be an instance of `bytes`/`bytearray`!')
         return False
@@ -100,11 +100,11 @@ def comm_p2p_endpoint_send(buffer):
     else:
         return wrapper.comm_p2p_endpoint_send(bytes(buffer), ctypes.byref(cbuffer_size))
 
-# ssize_t comm_p2p_endpoint_recv(uint8_t * const buffer, const size_t& buffer_size);
-C_RX_BUFFER_SIZE = ctypes.c_size_t(1024)
+# size_t comm_p2p_endpoint_recv_packet(uint8_t * const buffer, const size_t& buffer_size, int64_t& timestamp_us);
+C_RX_BUFFER_SIZE = ctypes.c_size_t(4096)
 CREF_RX_BUFFER_SIZE = ctypes.byref(C_RX_BUFFER_SIZE)
-C_RX_BUFFER = (ctypes.c_uint8 * C_RX_BUFFER_SIZE.value)()
-def comm_p2p_endpoint_recv():
+c_rx_buffer = (ctypes.c_uint8 * C_RX_BUFFER_SIZE.value)()
+def comm_p2p_endpoint_recv_packet():
     global wrapper
     rx_buf = None
     ctimestamp_us = ctypes.c_int64(-1)
@@ -112,15 +112,56 @@ def comm_p2p_endpoint_recv():
         print('Shared library must be loaded in advance!')
         return (rx_buf, ctimestamp_us.value)
 
-    wrapper.comm_p2p_endpoint_recv.restype = ctypes.c_ssize_t
+    wrapper.comm_p2p_endpoint_recv_packet.restype = ctypes.c_size_t
 
-    rx_byte_count = wrapper.comm_p2p_endpoint_recv(C_RX_BUFFER, CREF_RX_BUFFER_SIZE, ctypes.byref(ctimestamp_us))
+    rx_byte_count = wrapper.comm_p2p_endpoint_recv_packet(c_rx_buffer, CREF_RX_BUFFER_SIZE, ctypes.byref(ctimestamp_us))
     if (0 < rx_byte_count):
-        rx_buf = bytes(C_RX_BUFFER)[:rx_byte_count]
+        rx_buf = bytes(c_rx_buffer)[:rx_byte_count]
     elif (0 > rx_byte_count):
         print('Could not read from Rx Pipe (error code: {})!'.format(rx_byte_count))
 
     return (rx_buf, ctimestamp_us.value)
+
+# size_t comm_p2p_endpoint_recv_packets(
+#     uint8_t * const buffer, const size_t& buffer_size,
+#     size_t * const packet_sizes,
+#     int64_t * const timestamps,
+#     const size_t& max_number_of_packets
+# );
+C_MAX_NUMBER_OF_PACKETS = ctypes.c_size_t(10)
+CREF_MAX_NUMBER_OF_PACKETS = ctypes.byref(C_MAX_NUMBER_OF_PACKETS)
+c_packet_sizes = (ctypes.c_size_t * C_MAX_NUMBER_OF_PACKETS.value)()
+c_timestamps = (ctypes.c_int64 * C_MAX_NUMBER_OF_PACKETS.value)()
+def comm_p2p_endpoint_recv_packets():
+    global wrapper
+    packets = []
+    if (not wrapper):
+        print('Shared library must be loaded in advance!')
+        return packets
+
+    wrapper.comm_p2p_endpoint_recv_packets.restype = ctypes.c_size_t
+
+    rx_byte_count = wrapper.comm_p2p_endpoint_recv_packets(
+        c_rx_buffer, CREF_RX_BUFFER_SIZE,
+        c_packet_sizes, c_timestamps,
+        CREF_MAX_NUMBER_OF_PACKETS
+    )
+
+    packet_index = 0
+    packet_size = 0
+    buffer_index = 0
+
+    while ((C_MAX_NUMBER_OF_PACKETS.value > packet_index) and (rx_byte_count > buffer_index)):
+        packet_size = c_packet_sizes[packet_index]
+        packets.append({
+            'data': bytes(c_rx_buffer)[buffer_index:(buffer_index + packet_size)],
+            'timestamp_us': c_timestamps[packet_index]
+        })
+
+        buffer_index += packet_size
+        packet_index += 1
+
+    return packets
 
 ####################################################################################################
 # Load `libcommw.so` (or `libcommw.dll` on Windows)

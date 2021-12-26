@@ -106,7 +106,7 @@ bool comm_p2p_endpoint_send(const uint8_t * const buffer, const size_t& buffer_s
     return p_endpoint->send(comm::Packet::create(buffer, buffer_size));
 }
 
-ssize_t comm_p2p_endpoint_recv_packet(uint8_t * const buffer, const size_t& buffer_size, int64_t& timestamp_us) {
+size_t comm_p2p_endpoint_recv_packet(uint8_t * const buffer, const size_t& buffer_size, int64_t& timestamp_us) {
     std::lock_guard<std::mutex> lock(rx_queue_mutex);
     if (p_rx_packets.empty()) {
         std::lock_guard<std::mutex> lock(endpoint_mutex);
@@ -132,32 +132,56 @@ ssize_t comm_p2p_endpoint_recv_packet(uint8_t * const buffer, const size_t& buff
     return 0;
 }
 
-ssize_t comm_p2p_endpoint_recv_packets(uint8_t * const buffer, const size_t& buffer_size) {
+size_t comm_p2p_endpoint_recv_packets(
+    uint8_t * const buffer, const size_t& buffer_size,
+    size_t * const packet_sizes,
+    int64_t * const timestamps,
+    const size_t& max_number_of_packets
+) {
+    if ((0 == buffer_size) || (0 == max_number_of_packets)) {
+        return 0UL;
+    }
+
     std::lock_guard<std::mutex> lock(rx_queue_mutex);
-    if (p_rx_packets.empty()) {
+    {
         std::lock_guard<std::mutex> lock(endpoint_mutex);
         if (nullptr != p_endpoint) {
             p_endpoint->recvAll(p_rx_packets, false);
         }
     }
 
+#ifdef DEBUG
+    if (!p_rx_packets.empty()) {
+        LOGI("[%s][%d] %zu packets in Rx Queue!\n", __func__, __LINE__, p_rx_packets.size());
+    }
+#endif
+
+    size_t packet_index = 0;
     size_t buffer_index = 0;
     size_t packet_size = 0;
-    size_t packet_timestamp_us = 0;
-    while (!p_rx_packets.empty()) {
+    std::unique_ptr<comm::Packet> p_packet;
+    while ((!p_rx_packets.empty()) && (max_number_of_packets > packet_index)) {
         packet_size = p_rx_packets.front()->getPayloadSize();
-
-        if (buffer_size < (buffer_index + packet_size + PACKET_TIMESTAMP_SIZE + SIZE_OF_PACKET_SIZE)) {
+        if (buffer_size < (buffer_index + packet_size)) {
             break;
-        } else {
-            memcpy((buffer + buffer_index), p_rx_packets.front()->getPayload().get(), rx_count);
-            timestamp_us = p_rx_packets.front()->getTimestampUs();
-            p_rx_packets.pop_front();
-            return rx_count;
         }
+
+        p_packet = std::move(p_rx_packets.front());
+        p_rx_packets.pop_front();
+
+        memcpy((buffer + buffer_index), p_packet->getPayload().get(), packet_size);
+        timestamps[packet_index] = p_packet->getTimestampUs();
+        LOGD("[%s][%d] Packet %zu (%zu bytes) at %ld (us) -> Buffer index: %zu\n",
+            __func__, __LINE__,
+            packet_index, packet_size, p_packet->getTimestampUs(), buffer_index
+        );
+
+        packet_sizes[packet_index] = packet_size;
+        buffer_index += packet_size;
+        packet_index++;
     }
 
-    return 0;
+    return buffer_index;
 }
 
 }   // extern "C"
