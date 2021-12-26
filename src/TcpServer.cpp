@@ -240,7 +240,9 @@ ssize_t TcpServer::lread(const std::unique_ptr<uint8_t[]>& pBuffer, const size_t
         } else {
             perror("Failed to read from Tcp Socket!");
         }
-    } else if (0 < ret) {
+    } else if (0 == ret) {
+        ret = -2;   // Stream socket peer has performed an orderly shutdown!
+    } else {
         LOGD("[%s][%d] Received %ld bytes\n", __func__, __LINE__, ret);
     }
 #endif  // __WIN32__
@@ -261,7 +263,7 @@ ssize_t TcpServer::lwrite(const std::unique_ptr<uint8_t[]>& pData, const size_t&
             } else {
                 mTxPipeFd = -1;
                 LOGE("Failed to write to Tcp Socket (error code: %d)\n", error);
-                break;                
+                break;
             }
         } else if (0 < ret) {
             LOGD("[%s][%d] Transmitted %ld bytes\n", __func__, __LINE__, ret);
@@ -277,7 +279,9 @@ ssize_t TcpServer::lwrite(const std::unique_ptr<uint8_t[]>& pData, const size_t&
                 perror("Failed to write to Tcp Socket!");
                 break;
             }
-        } else if (0 < ret) {
+        } else if (0 == ret) {
+            // Should not happen!
+        } else {
             LOGD("[%s][%d] Transmitted %ld bytes\n", __func__, __LINE__, ret);
             break;
         }
