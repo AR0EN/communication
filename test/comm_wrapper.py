@@ -100,27 +100,33 @@ def comm_p2p_endpoint_send(buffer):
     else:
         return wrapper.comm_p2p_endpoint_send(bytes(buffer), ctypes.byref(cbuffer_size))
 
-# size_t comm_p2p_endpoint_recv_packet(uint8_t * const buffer, const size_t& buffer_size, int64_t& timestamp_us);
+PACKET_KEY_DATA      = 'data'
+PACKET_KEY_TIMESTAMP = 'timestamp_us'
 C_RX_BUFFER_SIZE = ctypes.c_size_t(4096)
 CREF_RX_BUFFER_SIZE = ctypes.byref(C_RX_BUFFER_SIZE)
 c_rx_buffer = (ctypes.c_uint8 * C_RX_BUFFER_SIZE.value)()
+
+# size_t comm_p2p_endpoint_recv_packet(uint8_t * const buffer, const size_t& buffer_size, int64_t& timestamp_us);
 def comm_p2p_endpoint_recv_packet():
     global wrapper
+    packet = {}
     rx_buf = None
     ctimestamp_us = ctypes.c_int64(-1)
     if (not wrapper):
         print('Shared library must be loaded in advance!')
-        return (rx_buf, ctimestamp_us.value)
+        return packet
 
     wrapper.comm_p2p_endpoint_recv_packet.restype = ctypes.c_size_t
 
     rx_byte_count = wrapper.comm_p2p_endpoint_recv_packet(c_rx_buffer, CREF_RX_BUFFER_SIZE, ctypes.byref(ctimestamp_us))
     if (0 < rx_byte_count):
-        rx_buf = bytes(c_rx_buffer)[:rx_byte_count]
+        packet[PACKET_KEY_DATA] = bytes(c_rx_buffer)[:rx_byte_count]
+        packet[PACKET_KEY_TIMESTAMP] = ctimestamp_us.value
     elif (0 > rx_byte_count):
-        print('Could not read from Rx Pipe (error code: {})!'.format(rx_byte_count))
+        # Should not happen!
+        print('Something was wrong (error code: {})!'.format(rx_byte_count))
 
-    return (rx_buf, ctimestamp_us.value)
+    return packet
 
 # size_t comm_p2p_endpoint_recv_packets(
 #     uint8_t * const buffer, const size_t& buffer_size,

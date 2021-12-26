@@ -48,7 +48,7 @@ bool test(const std::unique_ptr<uint8_t[]>& pdata, const size_t& size, const siz
         for (auto& ppacket : pdecoded_packets) {
             result &= size == ppacket->getPayloadSize();
             if (result) {
-                result &= compare(ppacket->getPayload(), pdata, size);
+                result &= ncompare(ppacket->getPayload(), pdata, size);
             }
             LOGI("  -> Decoded %zu bytes\n",
                 ppacket->getPayloadSize()
