@@ -18,9 +18,10 @@ A lightweight library for Packet-based P2P Communication
 ├── tools/
 ├── wrapper
 │   └── README.md
+├── CMakeLists.txt
 ├── LICENSE
 ├── README.md
-└── CMakeLists.txt
+└── setup.sh
 ```
 
 * `docs`    : documentation
@@ -34,7 +35,7 @@ A lightweight library for Packet-based P2P Communication
 * `UdpPeer`
 ```
 // Construct an UdpPeer
-std::unique_ptr<comm::P2P_Endpoint> pEndpoint = 
+std::unique_ptr<comm::P2P_Endpoint> pEndpoint =
     comm::UdpPeer::create(<Local Port>, <Peer/Remote IP Address>, <Peer/Remote Port>);
 ...
 
